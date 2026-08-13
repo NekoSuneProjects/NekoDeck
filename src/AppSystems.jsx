@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   AppWindow, Box, CheckCircle2, Copy, Download, ExternalLink, FileJson2,
-  Gamepad2, Globe2, RefreshCw, Save, Server, ShieldCheck, X
+  Gamepad2, Globe2, Package, RefreshCw, Save, Server, ShieldCheck, Upload, X
 } from 'lucide-react';
 import './app-systems.css';
 
@@ -22,6 +22,12 @@ async function api(path, options = {}) {
 
 function copy(value) { navigator.clipboard?.writeText(value); }
 function pretty(value) { return JSON.stringify(value || {}, null, 2); }
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
 
 const ROOT_DEFAULTS = {
   enabled: false,
@@ -30,6 +36,7 @@ const ROOT_DEFAULTS = {
   version: '0.1.0',
   devToken: '',
   authToken: '',
+  uploadHost: '',
   settings: '{}',
   permissions: '{}'
 };
@@ -72,7 +79,7 @@ function DiscordPage({ instances }) {
   </div>;
 }
 
-function RootPage({ selected, detail, form, setForm, save, busy, message, manifest, previewManifest, exportProject }) {
+function RootPage({ selected, detail, form, setForm, save, busy, packageBusy, message, manifest, previewManifest, exportProject, buildPackage, publishPackage }) {
   const set = (key, value) => setForm((current) => ({ ...current, [key]: value }));
   if (!selected) return <div className="systems-empty"><Box/><h3>Select an app</h3><p>Choose a NekoDeck app from Overview to configure its RootApp target.</p></div>;
   return <div className="systems-platform-page">
@@ -85,16 +92,23 @@ function RootPage({ selected, detail, form, setForm, save, busy, message, manife
 
       <div className="systems-form-grid"><label>Root project ID<input value={form.projectId} onChange={(e) => set('projectId', e.target.value)} placeholder="ID from Root Developer Portal"/></label><label>Version<input value={form.version} onChange={(e) => set('version', e.target.value)} placeholder="1.0.0"/></label></div>
       <div className="systems-form-grid"><label>DEV_TOKEN <small>leave blank to keep stored token</small><input type="password" value={form.devToken} onChange={(e) => set('devToken', e.target.value)} placeholder="Encrypted by NekoDeck"/></label><label>Upload auth token <small>leave blank to keep stored token</small><input type="password" value={form.authToken} onChange={(e) => set('authToken', e.target.value)} placeholder="Encrypted by NekoDeck"/></label></div>
+      <div className="systems-form-grid"><label>Advanced upload host <small>optional; current Root docs do not require this</small><input value={form.uploadHost} onChange={(e) => set('uploadHost', e.target.value)} placeholder="dev.rootapp.com"/></label><div className="systems-note"><Package size={16}/><span>Ready-package mode runs <code>npm install</code>, <code>npm run build</code>, then creates <code>rootapp.pkg</code> with the Root SDK.</span></div></div>
 
       <div className="systems-json-grid"><label>Manifest settings JSON<textarea value={form.settings} onChange={(e) => set('settings', e.target.value)} spellCheck="false"/></label><label>Manifest permissions JSON<textarea value={form.permissions} onChange={(e) => set('permissions', e.target.value)} spellCheck="false"/></label></div>
-      <div className="systems-note"><ShieldCheck size={16}/><span>Root credentials stay encrypted in NekoDeck. Exported ZIP files contain only <code>.env.example</code>; stored DEV_TOKEN and upload tokens are never embedded.</span></div>
-      {selected.templateId === 'web-activity' && selected.config?.activitySourceType === 'upload' ? <div className="systems-note success"><CheckCircle2 size={16}/><span>This uploaded web game/app can be copied directly into the Root export's <code>client/dist</code>, including JS, CSS, WASM and media assets.</span></div> : <div className="systems-note"><Globe2 size={16}/><span>This app has no locally uploaded web client. The exporter will create a Root client placeholder that you can replace with your React/Vite/HTML build.</span></div>}
+      <div className="systems-note"><ShieldCheck size={16}/><span>Root credentials stay encrypted in NekoDeck. Source ZIP files contain only <code>.env.example</code>; stored DEV_TOKEN and upload tokens are never embedded.</span></div>
+      {selected.templateId === 'web-activity' && selected.config?.activitySourceType === 'upload' ? <div className="systems-note success"><CheckCircle2 size={16}/><span>This uploaded web game/app is copied directly into the Root export's <code>client/dist</code>, including JS, CSS, WASM and media assets.</span></div> : <div className="systems-note"><Globe2 size={16}/><span>This app has no locally uploaded web client. The exporter creates a Root client placeholder that you can replace with your React/Vite/HTML build.</span></div>}
 
-      <div className="systems-actions"><button disabled={busy} onClick={save}><Save size={14}/>{busy ? 'Saving…' : 'Save RootApp config'}</button><button onClick={previewManifest}><FileJson2 size={14}/>Preview manifest</button><button className="systems-primary" onClick={exportProject}><Download size={14}/>Export Root project ZIP</button></div>
+      <div className="systems-actions">
+        <button disabled={busy || packageBusy} onClick={save}><Save size={14}/>{busy ? 'Saving…' : 'Save RootApp config'}</button>
+        <button disabled={packageBusy} onClick={previewManifest}><FileJson2 size={14}/>Preview manifest</button>
+        <button disabled={packageBusy} onClick={exportProject}><Download size={14}/>Source ZIP</button>
+        <button className="systems-primary" disabled={packageBusy || !form.enabled} onClick={buildPackage}><Package size={14}/>{packageBusy ? 'Building…' : 'Build .pkg'}</button>
+        <button disabled={packageBusy || !form.enabled || !detail?.credentialStatus?.authToken} onClick={publishPackage}><Upload size={14}/>Build + Upload</button>
+      </div>
       {message && <div className="systems-message">{message}</div>}
     </section>
 
-    {detail?.commands && <section className="systems-commands"><header><div><h3>Root SDK workflow</h3><p>Run these after extracting the exported project.</p></div></header>{Object.entries(detail.commands).map(([key, value]) => <div key={key}><span>{key}</span><code>{value}</code><button onClick={() => copy(value)}><Copy size={13}/></button></div>)}</section>}
+    {detail?.commands && <section className="systems-commands"><header><div><h3>Root SDK workflow</h3><p>The source ZIP contains scripts for the same workflow NekoDeck uses for ready-package mode.</p></div></header>{Object.entries(detail.commands).map(([key, value]) => <div key={key}><span>{key}</span><code>{value}</code><button onClick={() => copy(value)}><Copy size={13}/></button></div>)}</section>}
 
     {manifest && <section className="systems-manifest"><header><h3>root-manifest.json</h3><button onClick={() => copy(pretty(manifest))}><Copy size={13}/>Copy</button></header><pre>{pretty(manifest)}</pre></section>}
   </div>;
@@ -110,6 +124,7 @@ export default function AppSystems() {
   const [manifest, setManifest] = useState(null);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [packageBusy, setPackageBusy] = useState(false);
   const selected = useMemo(() => instances.find((x) => x.id === selectedId) || null, [instances, selectedId]);
 
   const load = async () => {
@@ -128,6 +143,7 @@ export default function AppSystems() {
         projectId: data.rootApp?.projectId || '',
         version: data.rootApp?.version || '0.1.0',
         devToken: '', authToken: '',
+        uploadHost: data.rootApp?.uploadHost || '',
         settings: pretty(data.rootApp?.settings || {}), permissions: pretty(data.rootApp?.permissions || {})
       });
       setManifest(null);
@@ -161,12 +177,35 @@ export default function AppSystems() {
       if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.error || `HTTP ${response.status}`); }
       const blob = await response.blob();
       const disposition = response.headers.get('content-disposition') || '';
-      const match = disposition.match(/filename="([^"]+)"/);
-      const filename = match?.[1] || `${selected?.name || 'NekoDeck'}-RootApp.zip`;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-      setMessage('Root project ZIP exported.');
+      const filename = disposition.match(/filename="([^"]+)"/)?.[1] || `${selected?.name || 'NekoDeck'}-RootApp.zip`;
+      downloadBlob(blob, filename);
+      setMessage('Root source project ZIP exported.');
     } catch (error) { setMessage(error.message); }
+  };
+
+  const buildPackage = async () => {
+    if (!selectedId) return;
+    setPackageBusy(true); setMessage('Installing Root dependencies, compiling and building rootapp.pkg. This can take a few minutes…');
+    try {
+      const response = await fetch(`/api/rootapp/${selectedId}/package`, { headers: tokenHeaders() });
+      if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.error || `HTTP ${response.status}`); }
+      const blob = await response.blob();
+      const disposition = response.headers.get('content-disposition') || '';
+      const filename = disposition.match(/filename="([^"]+)"/)?.[1] || 'rootapp.pkg';
+      downloadBlob(blob, filename);
+      setMessage(`Root package built successfully: ${filename}`);
+    } catch (error) { setMessage(error.message); }
+    finally { setPackageBusy(false); }
+  };
+
+  const publishPackage = async () => {
+    if (!selectedId) return;
+    setPackageBusy(true); setMessage('Building rootapp.pkg and uploading it to Root…');
+    try {
+      const data = await api(`/api/rootapp/${selectedId}/publish`, { method: 'POST', body: '{}' });
+      setMessage(data.message || 'RootApp uploaded successfully.');
+    } catch (error) { setMessage(error.message); }
+    finally { setPackageBusy(false); }
   };
 
   return <>
@@ -174,7 +213,7 @@ export default function AppSystems() {
     {open && <div className="systems-backdrop" onMouseDown={(e) => e.target === e.currentTarget && setOpen(false)}><div className="systems-window">
       <header><div><span>NekoDeck</span><h2>App Systems</h2><p>Build once, configure platform-specific delivery for Discord and RootApp.</p></div><button onClick={() => setOpen(false)}><X/></button></header>
       <nav><button className={tab === 'overview' ? 'active' : ''} onClick={() => setTab('overview')}><AppWindow size={15}/>Overview</button><button className={tab === 'discord' ? 'active' : ''} onClick={() => setTab('discord')}><Gamepad2 size={15}/>Discord</button><button className={tab === 'rootapp' ? 'active' : ''} onClick={() => setTab('rootapp')}><Box size={15}/>RootApp</button><button onClick={load}><RefreshCw size={15}/>Refresh</button></nav>
-      <main>{tab === 'overview' && <Overview instances={instances} select={setSelectedId} setTab={setTab}/>} {tab === 'discord' && <DiscordPage instances={instances}/>} {tab === 'rootapp' && <RootPage selected={selected} detail={detail} form={form} setForm={setForm} save={save} busy={busy} message={message} manifest={manifest} previewManifest={previewManifest} exportProject={exportProject}/>}</main>
+      <main>{tab === 'overview' && <Overview instances={instances} select={setSelectedId} setTab={setTab}/>} {tab === 'discord' && <DiscordPage instances={instances}/>} {tab === 'rootapp' && <RootPage selected={selected} detail={detail} form={form} setForm={setForm} save={save} busy={busy} packageBusy={packageBusy} message={message} manifest={manifest} previewManifest={previewManifest} exportProject={exportProject} buildPackage={buildPackage} publishPackage={publishPackage}/>}</main>
     </div></div>}
   </>;
 }

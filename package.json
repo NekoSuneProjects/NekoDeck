@@ -1,8 +1,8 @@
 {
   "name": "nekodeck",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
-  "description": "Multi-platform Discord and RootApp builder for profile widgets, Activities, apps, Discord.js bots and Root community bots.",
+  "description": "Multi-platform Discord and RootApp builder with profile widgets, Activities, apps, Discord.js bots, Root bots, and ready-to-publish Root .pkg builds.",
   "author": {
     "name": "NekoSuneVR / NekoSuneProjects",
     "email": "NekoSuneProjects@users.noreply.github.com"

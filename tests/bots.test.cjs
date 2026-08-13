@@ -15,7 +15,7 @@ function sampleConfig() {
     description: 'Test bot',
     platforms: { discord: true, rootapp: true },
     discord: { clientId: '123456789012345678', guildId: '987654321098765432', statusText: 'Watching tests' },
-    rootapp: { projectId: 'ACj4U-eThgmjXUOBAjk_jw', version: '1.2.3', settings: {}, permissions: { community: { manageRoles: true } } },
+    rootapp: { projectId: 'ACj4U-eThgmjXUOBAjk_jw', version: '1.2.3', uploadHost: 'dev.rootapp.com', settings: {}, permissions: { community: { manageRoles: true } } },
     commands: [{ name: 'ping', description: 'Replies with Pong!', response: 'Pong {user}', discord: true, rootapp: true, ephemeral: true }],
     autoReplies: [{ trigger: 'hello', response: 'Hi {user}', mode: 'contains', discord: true, rootapp: true }]
   });
@@ -32,6 +32,11 @@ test('command validation normalizes supported command names', () => {
 test('auto reply validates regex rules', () => {
   assert.equal(normalizeAutoReply({ trigger: '^hello', response: 'hi', mode: 'regex' }).mode, 'regex');
   assert.throws(() => normalizeAutoReply({ trigger: '[', response: 'x', mode: 'regex' }), /invalid regex/);
+});
+
+test('Root Bot config normalizes optional upload host', () => {
+  assert.equal(sampleConfig().rootapp.uploadHost, 'dev.rootapp.com');
+  assert.throws(() => normalizeBotConfig({ rootapp: { version: '1.0.0', uploadHost: 'bad host/path' } }), /hostname/);
 });
 
 test('Root Bot manifest is server-only and always requests createMessage', () => {
@@ -58,7 +63,7 @@ test('Discord export contains runnable source without stored secrets', () => {
   assert.doesNotMatch(zip.toBuffer().toString('utf8'), /real-secret-token/);
 });
 
-test('Root export contains manifest, TypeScript source and no client bundle', () => {
+test('Root export contains manifest, TypeScript source and pkg build scripts', () => {
   const instance = { id: 'bot-2', templateId: 'bot-project', name: 'Root Neko', config: sampleConfig() };
   const { zip, manifest } = buildRootZip(instance);
   const names = zip.getEntries().map(x => x.entryName);
@@ -69,4 +74,11 @@ test('Root export contains manifest, TypeScript source and no client bundle', ()
   assert.equal(manifest.package.server.launch, 'dist/main.js');
   assert.match(zip.readAsText('src/main.ts'), /@rootsdk\/server-bot/);
   assert.match(zip.readAsText('src/main.ts'), /ChannelMessageEvent\.ChannelMessageCreated/);
+
+  const pkg = JSON.parse(zip.readAsText('package.json'));
+  assert.equal(pkg.scripts['root:package'], 'rootsdk build package --output-file ./rootapp.pkg --project-folder .');
+  assert.match(pkg.scripts['root:upload'], /--authToken \$ROOT_AUTH_TOKEN/);
+  assert.match(pkg.scripts['root:upload'], /--host dev\.rootapp\.com/);
+  assert.match(zip.readAsText('README.md'), /npm install && npm run build/);
+  assert.match(zip.readAsText('README.md'), /rootapp\.pkg/);
 });
