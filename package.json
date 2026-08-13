@@ -17,8 +17,8 @@
     "preview": "vite preview --host 0.0.0.0",
     "start": "node server/start.cjs",
     "desktop": "npm run build:web && electron .",
-    "build:win": "npm run build:web && electron-builder --win nsis portable",
-    "build:linux": "npm run build:web && electron-builder --linux AppImage deb",
+    "build:win": "npm run build:web && electron-builder --win nsis portable --publish never",
+    "build:linux": "npm run build:web && electron-builder --linux AppImage deb --publish never",
     "test": "node --test tests/*.test.cjs"
   },
   "dependencies": {
@@ -43,8 +43,7 @@
     "directories": { "output": "release" },
     "files": ["dist/**/*", "electron/**/*", "server/**/*", "shared/**/*", "package.json"],
     "win": {
-      "target": [{"target":"nsis","arch":["x64"]},{"target":"portable","arch":["x64"]}],
-      "artifactName": "NekoDeck-${version}-Windows-${arch}.${ext}"
+      "target": [{"target":"nsis","arch":["x64"]},{"target":"portable","arch":["x64"]}]
     },
     "linux": {
       "target": [{"target":"AppImage","arch":["x64"]},{"target":"deb","arch":["x64"]}],
@@ -52,6 +51,13 @@
       "maintainer": "NekoSuneProjects <NekoSuneProjects@users.noreply.github.com>",
       "artifactName": "NekoDeck-${version}-Linux-${arch}.${ext}"
     },
-    "nsis": {"oneClick":false,"allowToChangeInstallationDirectory":true}
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "NekoDeck-${version}-Windows-${arch}-Setup.${ext}"
+    },
+    "portable": {
+      "artifactName": "NekoDeck-${version}-Windows-${arch}-Portable.${ext}"
+    }
   }
 }
