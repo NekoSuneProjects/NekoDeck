@@ -20,7 +20,9 @@ try {
     description: 'NekoDeck Root package CI smoke test',
     platforms: { discord: false, rootapp: true },
     rootapp: {
-      projectId: 'nekodeck-root-pkg-ci-smoke',
+      // Root App/Bot IDs use a compact URL-safe identifier format.
+      // Packaging validates the format locally but does not require this CI ID to be registered.
+      projectId: 'ACj4U-eThgmjXUOBAjk_jw',
       version: '0.0.1',
       settings: {},
       permissions: {}
