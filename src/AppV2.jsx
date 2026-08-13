@@ -1,19 +1,553 @@
-import React,{useEffect,useState}from'react';
-import BaseApp from'./App.jsx';
-import {Activity,ChevronRight,Music2,Plus,RefreshCw,ShieldCheck,Sparkles,X}from'lucide-react';
-import'./v2.css';
+import React, { useEffect, useMemo, useState } from 'react';
+import BaseApp from './App.jsx';
+import {
+  Activity,
+  ChevronRight,
+  Copy,
+  Github,
+  LayoutDashboard,
+  Music2,
+  Plus,
+  RefreshCw,
+  Settings,
+  ShieldCheck,
+  Sparkles,
+  X
+} from 'lucide-react';
+import './v2.css';
 
-const V2=['trn','steam','rockstar','vrchat','lastfm','spotify','custom-stats'];
-function api(path,options={}){const token=localStorage.getItem('nekodeckAdminToken')||'';return fetch(path,{...options,headers:{'content-type':'application/json',...(token?{'X-NekoDeck-Token':token}:{}),...(options.headers||{})}}).then(async r=>{const d=await r.json().catch(()=>({error:`HTTP ${r.status}`}));if(!r.ok)throw new Error(d.error||`HTTP ${r.status}`);return d})}
-const empty={templateId:'trn',name:'',discordClientId:'',discordClientSecret:'',botToken:'',providerApiKey:'',providerClientId:'',providerClientSecret:'',providerSession:'',config:{title:'My Stats',message:'',imageUrl:'',statsText:'Wins=0\nHours=0'}};
-function secretLabel(t){return t==='rockstar'?'Social Club Cookie':t==='vrchat'?'VRChat auth Cookie':t==='spotify'?'Spotify Client Secret':t==='steam'?'Steam Web API Key':t==='lastfm'?'Last.fm API Key':'TRN API Key'}
-function providerFields(t){if(['trn','steam','lastfm'].includes(t))return['providerApiKey'];if(['rockstar','vrchat'].includes(t))return['providerSession'];if(t==='spotify')return['providerClientId','providerClientSecret'];return[]}
-function Card({children,className=''}){return <div className={`v2-card ${className}`}>{children}</div>}
-function TrackerHub(){const[open,setOpen]=useState(false),[tab,setTab]=useState('new'),[widgets,setWidgets]=useState([]),[instances,setInstances]=useState([]),[form,setForm]=useState(empty),[selected,setSelected]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
- const load=()=>Promise.all([api('/api/widgets'),api('/api/instances')]).then(([w,i])=>{setWidgets(w.widgets.filter(x=>V2.includes(x.id)));setInstances(i.instances.filter(x=>V2.includes(x.templateId)))}).catch(e=>setError(e.message));
- useEffect(()=>{if(open)load()},[open]);const template=widgets.find(x=>x.id===form.templateId);const set=(k,v)=>setForm(f=>({...f,[k]:v})),cfg=(k,v)=>setForm(f=>({...f,config:{...f.config,[k]:v}}));
- const create=async e=>{e.preventDefault();setBusy(true);setError('');try{const payload={...form,config:{}};if(form.templateId==='custom-stats'){payload.config={title:form.config.title,message:form.config.message,imageUrl:form.config.imageUrl,stats:form.config.statsText.split(/\n/).map(s=>{const[a,...b]=s.split('=');return{label:a.trim(),value:b.join('=').trim()}}).filter(x=>x.label)}}await api('/api/v2/instances',{method:'POST',body:JSON.stringify(payload)});setForm({...empty,templateId:form.templateId});await load();setTab('created')}catch(e){setError(e.message)}finally{setBusy(false)}};
- return <><button className="v2-launch" onClick={()=>setOpen(true)}><Sparkles size={18}/><span>Tracker Hub</span></button>{open&&<div className="v2-backdrop" onMouseDown={e=>e.target===e.currentTarget&&setOpen(false)}><div className="v2-window"><header><div><b>NekoDeck Tracker Hub</b><span>v0.2 · gaming, music, VRChat & custom cards</span></div><button onClick={()=>setOpen(false)}><X/></button></header><nav><button className={tab==='new'?'active':''} onClick={()=>setTab('new')}><Plus size={15}/>New</button><button className={tab==='created'?'active':''} onClick={()=>setTab('created')}><Activity size={15}/>Created <i>{instances.length}</i></button></nav>{error&&<div className="v2-error">{error}</div>}<main>{tab==='new'?<form className="v2-form" onSubmit={create}><section><h3>Create tracker/widget</h3><div className="v2-grid"><label>Template<select value={form.templateId} onChange={e=>set('templateId',e.target.value)}>{widgets.map(w=><option value={w.id} key={w.id}>{w.name}</option>)}</select></label><label>Name<input required value={form.name} onChange={e=>set('name',e.target.value)} placeholder="My Stats Widget"/></label></div></section><section><h3>Discord application <small>required for every widget</small></h3><label>Client ID<input required value={form.discordClientId} onChange={e=>set('discordClientId',e.target.value)}/></label><label>Client Secret<input required type="password" value={form.discordClientSecret} onChange={e=>set('discordClientSecret',e.target.value)}/></label><label>Bot Token <small>optional</small><input type="password" value={form.botToken} onChange={e=>set('botToken',e.target.value)}/></label></section>{providerFields(form.templateId).length>0&&<section><h3>{template?.provider?.name||'Provider'} <small>encrypted server-side</small></h3>{providerFields(form.templateId).map(k=><label key={k}>{k==='providerClientId'?'Spotify Client ID':secretLabel(form.templateId)}<input required type={k==='providerClientId'?'text':'password'} value={form[k]} onChange={e=>set(k,e.target.value)} placeholder={k==='providerSession'?'Paste an existing authenticated cookie/session — not your password':''}/></label>)}{['rockstar','vrchat'].includes(form.templateId)&&<p className="v2-note"><ShieldCheck size={15}/>Session cookie only. NekoDeck does not ask for or store the account password.</p>}</section>}{form.templateId==='custom-stats'&&<section><h3>Custom card</h3><label>Title<input value={form.config.title} onChange={e=>cfg('title',e.target.value)}/></label><label>Message<textarea value={form.config.message} onChange={e=>cfg('message',e.target.value)}/></label><label>Image URL<input value={form.config.imageUrl} onChange={e=>cfg('imageUrl',e.target.value)} placeholder="https://…/image.png"/></label><label>Stats <small>one per line: Label=Value</small><textarea value={form.config.statsText} onChange={e=>cfg('statsText',e.target.value)}/></label></section>}<button className="v2-primary" disabled={busy}>{busy?'Creating…':'Create widget'}</button></form>:<div className="v2-list"><div className="v2-listhead"><h3>Created tracker widgets</h3><button onClick={load}><RefreshCw size={15}/>Refresh</button></div>{instances.length?instances.map(i=><Card key={i.id}><div className="v2-item"><div><b>{i.name}</b><span>{widgets.find(w=>w.id===i.templateId)?.name||i.templateId}</span></div><div className="v2-badges"><em className={i.credentialStatus.discordClientSecret?'ok':''}>Discord</em><em className={Object.entries(i.credentialStatus||{}).some(([k,v])=>k.startsWith('provider')&&v)?'ok':''}>Provider</em></div><button onClick={()=>setSelected(i)}>Open <ChevronRight size={15}/></button></div></Card>):<Card>No tracker widgets yet.</Card>}</div>}</main></div>{selected&&<Runner instance={selected} widget={widgets.find(w=>w.id===selected.templateId)} close={()=>setSelected(null)}/>}</div>}</>}
-function Runner({instance,widget,close}){const[q,setQ]=useState(''),[mode,setMode]=useState(instance.templateId==='trn'?'apex':'Skills'),[platform,setPlatform]=useState('origin'),[data,setData]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);const run=async()=>{setBusy(true);setError('');try{let u='';switch(instance.templateId){case'trn':u=`/api/widgets/trn/${instance.id}/player?game=${mode}&platform=${platform}&player=${encodeURIComponent(q)}`;break;case'steam':u=`/api/widgets/steam/${instance.id}/player?player=${encodeURIComponent(q)}`;break;case'lastfm':u=`/api/widgets/lastfm/${instance.id}/user?user=${encodeURIComponent(q)}`;break;case'vrchat':u=`/api/widgets/vrchat/${instance.id}/me`;break;case'rockstar':u=`/api/widgets/rockstar/${instance.id}/stats?nickname=${encodeURIComponent(q)}&category=${mode}`;break;case'spotify':u=`/api/widgets/spotify/${instance.id}/profile`;break;case'custom-stats':setData({custom:instance.config});setBusy(false);return}setData(await api(u))}catch(e){setError(e.message)}finally{setBusy(false)}};const connectSpotify=async()=>{try{const d=await api(`/api/widgets/spotify/${instance.id}/connect`);window.open(d.authUrl,'_blank','noopener');setData({redirectUri:d.redirectUri,message:'Finish Spotify authorization in the browser, then Refresh.'})}catch(e){setError(e.message)}};return <div className="v2-runner"><div className="v2-runnerbox"><header><div><b>{instance.name}</b><span>{widget?.name||instance.templateId}</span></div><button onClick={close}><X/></button></header>{['trn','steam','lastfm','rockstar'].includes(instance.templateId)&&<label>{instance.templateId==='lastfm'?'Last.fm username':instance.templateId==='rockstar'?'Social Club nickname':'Player / username'}<input value={q} onChange={e=>setQ(e.target.value)}/></label>}{instance.templateId==='trn'&&<div className="v2-grid"><label>Game<select value={mode} onChange={e=>setMode(e.target.value)}><option value="apex">Apex Legends API</option><option value="fortnite">Fortnite profile link</option><option value="halo">Halo profile link</option></select></label><label>Platform<select value={platform} onChange={e=>setPlatform(e.target.value)}><option value="origin">EA/Origin</option><option value="xbl">Xbox</option><option value="psn">PlayStation</option></select></label></div>}{instance.templateId==='rockstar'&&<label>Category<select value={mode} onChange={e=>setMode(e.target.value)}>{['Career','Skills','General','Crimes','Vehicles','Cash','Combat','Weapons'].map(x=><option key={x}>{x}</option>)}</select></label>}{instance.templateId==='spotify'&&<button className="v2-connect" onClick={connectSpotify}><Music2 size={16}/>Connect Spotify</button>}<button className="v2-primary" onClick={run} disabled={busy}>{busy?'Loading…':'Refresh stats'}</button>{error&&<div className="v2-error">{error}</div>}{data&&<Result data={data} type={instance.templateId}/>}</div></div>}
-function Result({data,type}){const custom=data.custom;if(type==='custom-stats'&&custom)return <div className="v2-custom">{custom.imageUrl&&<img src={custom.imageUrl} alt=""/>}<h2>{custom.title}</h2><p>{custom.message}</p><div>{(custom.stats||[]).map((s,i)=><Card key={i}><span>{s.label}</span><b>{s.value}</b></Card>)}</div></div>;if(data.trackerUrl)return <Card><p>{data.notice}</p><a href={data.trackerUrl} target="_blank" rel="noreferrer">Open Tracker Network profile</a></Card>;return <pre className="v2-json">{JSON.stringify(data,null,2)}</pre>}
-export default function AppV2(){return <><BaseApp/><TrackerHub/></>}
+const PROFILE_WIDGET_TYPES = ['trn', 'steam', 'rockstar', 'vrchat', 'lastfm', 'spotify', 'custom-stats'];
+const GAME_CANDIDATES = new Set(['trn', 'steam', 'rockstar']);
+const DISCORD_DEV_CONTACT = 'https://discord.com/developers/contact-us';
+
+function api(path, options = {}) {
+  const token = localStorage.getItem('nekodeckAdminToken') || '';
+  return fetch(path, {
+    ...options,
+    headers: {
+      'content-type': 'application/json',
+      ...(token ? { 'X-NekoDeck-Token': token } : {}),
+      ...(options.headers || {})
+    }
+  }).then(async (response) => {
+    const data = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+    if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+    return data;
+  });
+}
+
+const emptyForm = {
+  templateId: 'trn',
+  name: '',
+  discordClientId: '',
+  discordClientSecret: '',
+  botToken: '',
+  providerApiKey: '',
+  providerClientId: '',
+  providerClientSecret: '',
+  providerSession: '',
+  config: {
+    boardTitle: '',
+    boardSubtitle: '',
+    imageUrl: '',
+    title: 'My Stats',
+    message: '',
+    statsText: 'Wins=0\nHours=0'
+  }
+};
+
+function providerFields(templateId) {
+  if (['trn', 'steam', 'lastfm'].includes(templateId)) return ['providerApiKey'];
+  if (['rockstar', 'vrchat'].includes(templateId)) return ['providerSession'];
+  if (templateId === 'spotify') return ['providerClientId', 'providerClientSecret'];
+  return [];
+}
+
+function providerFieldLabel(templateId, key) {
+  if (key === 'providerClientId') return 'Spotify Client ID';
+  if (templateId === 'rockstar') return 'Social Club Cookie';
+  if (templateId === 'vrchat') return 'VRChat Auth Cookie';
+  if (templateId === 'spotify') return 'Spotify Client Secret';
+  if (templateId === 'steam') return 'Steam Web API Key';
+  if (templateId === 'lastfm') return 'Last.fm API Key';
+  return 'TRN API Key';
+}
+
+function imageFromArray(value) {
+  if (!Array.isArray(value)) return '';
+  const candidate = [...value].reverse().find((item) => item && (item['#text'] || item.url));
+  return candidate?.['#text'] || candidate?.url || '';
+}
+
+function safeText(value, fallback = '—') {
+  if (value === null || value === undefined || value === '') return fallback;
+  return String(value);
+}
+
+function profileModel(instance, widget, data) {
+  const config = instance?.config || {};
+  const base = {
+    eyebrow: widget?.name || instance?.templateId || 'Profile Widget',
+    title: config.boardTitle || instance?.name || 'Profile Widget',
+    subtitle: config.boardSubtitle || 'NekoDeck Profile Board preview',
+    image: config.imageUrl || '',
+    stats: [],
+    note: 'Preview generated by NekoDeck. Discord publishing requires Game Stats early-access approval.'
+  };
+
+  if (!data) {
+    return {
+      ...base,
+      stats: [
+        ['Data source', widget?.provider?.name || widget?.name || 'Configured'],
+        ['Discord publish', 'Early access'],
+        ['Mode', 'Board preview']
+      ]
+    };
+  }
+
+  if (instance.templateId === 'custom-stats') {
+    const custom = data.custom || config;
+    return {
+      ...base,
+      title: custom.title || base.title,
+      subtitle: custom.message || base.subtitle,
+      image: custom.imageUrl || base.image,
+      stats: (custom.stats || []).slice(0, 6).map((item) => [item.label, item.value])
+    };
+  }
+
+  if (instance.templateId === 'steam' && data.steam) {
+    const steam = data.steam;
+    const profile = steam.profile || {};
+    return {
+      ...base,
+      eyebrow: 'Steam Stats',
+      title: config.boardTitle || profile.personaname || instance.name,
+      subtitle: config.boardSubtitle || 'Steam profile & game activity',
+      image: base.image || profile.avatarfull || profile.avatarmedium || '',
+      stats: [
+        ['Games', safeText(steam.gameCount, '0')],
+        ['Playtime', `${safeText(steam.totalPlaytimeHours, '0')} h`],
+        ['Top game', steam.topGames?.[0]?.name || 'Private / unavailable']
+      ]
+    };
+  }
+
+  if (instance.templateId === 'lastfm' && data.lastfm) {
+    const lastfm = data.lastfm;
+    const user = lastfm.user || {};
+    const recent = lastfm.recentTracks?.[0];
+    return {
+      ...base,
+      eyebrow: 'Last.fm',
+      title: config.boardTitle || user.realname || user.name || instance.name,
+      subtitle: config.boardSubtitle || 'Listening profile',
+      image: base.image || imageFromArray(user.image),
+      stats: [
+        ['Scrobbles', safeText(user.playcount, '0')],
+        ['Now / recent', recent?.name || 'No recent track'],
+        ['Top artist', lastfm.topArtists?.[0]?.name || '—']
+      ],
+      note: 'NekoDeck preview only: Discord Game Stats is currently designed around supported games.'
+    };
+  }
+
+  if (instance.templateId === 'spotify' && data.spotify) {
+    const spotify = data.spotify;
+    const profile = spotify.profile || {};
+    const now = spotify.currentlyPlaying?.item;
+    return {
+      ...base,
+      eyebrow: 'Spotify',
+      title: config.boardTitle || profile.display_name || instance.name,
+      subtitle: config.boardSubtitle || 'Spotify listening profile',
+      image: base.image || profile.images?.[0]?.url || '',
+      stats: [
+        ['Followers', safeText(profile.followers?.total, '0')],
+        ['Now playing', now?.name || 'Nothing playing'],
+        ['Top track', spotify.topTracks?.[0]?.name || '—']
+      ],
+      note: 'NekoDeck preview only: Discord Game Stats is currently designed around supported games.'
+    };
+  }
+
+  if (instance.templateId === 'vrchat' && data.vrchat) {
+    const vrchat = data.vrchat;
+    return {
+      ...base,
+      eyebrow: 'VRChat',
+      title: config.boardTitle || vrchat.displayName || instance.name,
+      subtitle: config.boardSubtitle || vrchat.statusDescription || vrchat.status || 'VRChat profile',
+      image: base.image || vrchat.profilePic || '',
+      stats: [
+        ['Friends', safeText(vrchat.friends, '0')],
+        ['Online', safeText(vrchat.onlineFriends, '0')],
+        ['Platform', safeText(vrchat.lastPlatform)]
+      ],
+      note: 'NekoDeck preview only: VRChat is not a currently documented Discord Game Stats publishing target.'
+    };
+  }
+
+  if (instance.templateId === 'rockstar' && data.rockstar) {
+    const rockstar = data.rockstar;
+    const parsed = Array.isArray(rockstar.parsedStats) ? rockstar.parsedStats : [];
+    return {
+      ...base,
+      eyebrow: `GTA V · ${rockstar.category || 'Stats'}`,
+      title: config.boardTitle || rockstar.nickname || instance.name,
+      subtitle: config.boardSubtitle || 'Rockstar Social Club stats',
+      stats: parsed.slice(0, 6).map((item) => [item.label || item.name || 'Stat', item.value || '—'])
+    };
+  }
+
+  if (instance.templateId === 'trn') {
+    if (data.trackerUrl) {
+      return {
+        ...base,
+        eyebrow: 'Tracker Network',
+        title: config.boardTitle || instance.name,
+        subtitle: config.boardSubtitle || `${data.game || 'Game'} profile link`,
+        stats: [
+          ['Game', safeText(data.game)],
+          ['Player', safeText(data.player)],
+          ['API mode', 'Profile link only']
+        ],
+        note: data.notice || base.note
+      };
+    }
+    const trn = data.trn || {};
+    const segments = Array.isArray(trn.segments) ? trn.segments : [];
+    const overview = segments.find((segment) => segment.type === 'overview') || segments[0] || {};
+    const stats = overview.stats || {};
+    const compact = Object.entries(stats).slice(0, 6).map(([key, value]) => [
+      value?.metadata?.name || key,
+      value?.displayValue || value?.value || '—'
+    ]);
+    return {
+      ...base,
+      eyebrow: 'Tracker Network',
+      title: config.boardTitle || trn.platformInfo?.platformUserHandle || instance.name,
+      subtitle: config.boardSubtitle || trn.metadata?.activeLegendName || 'Game stats',
+      image: base.image || trn.platformInfo?.avatarUrl || '',
+      stats: compact.length ? compact : [['Tracker data', 'Loaded']]
+    };
+  }
+
+  return { ...base, stats: [['Data', 'Loaded'], ['Discord publish', 'Early access']] };
+}
+
+function ProfileCard({ instance, widget, data }) {
+  const model = profileModel(instance, widget, data);
+  return <article className="profile-preview-card">
+    <div className="profile-preview-hero">
+      {model.image ? <img src={model.image} alt=""/> : <div className="profile-preview-placeholder"><Sparkles size={30}/></div>}
+      <div className="profile-preview-shade"/>
+      <span>{model.eyebrow}</span>
+    </div>
+    <div className="profile-preview-body">
+      <h3>{model.title}</h3>
+      <p>{model.subtitle}</p>
+      <div className="profile-preview-stats">
+        {model.stats.slice(0, 6).map(([label, value], index) => <div key={`${label}-${index}`}><strong>{safeText(value)}</strong><span>{safeText(label)}</span></div>)}
+      </div>
+      <small>{model.note}</small>
+    </div>
+  </article>;
+}
+
+function StatusPill({ children, kind = 'neutral' }) {
+  return <span className={`profile-status ${kind}`}>{children}</span>;
+}
+
+function ProfileDeck({ onClassic }) {
+  const [page, setPage] = useState('board');
+  const [widgets, setWidgets] = useState([]);
+  const [instances, setInstances] = useState([]);
+  const [form, setForm] = useState(emptyForm);
+  const [selected, setSelected] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const profileWidgets = useMemo(() => widgets.filter((widget) => PROFILE_WIDGET_TYPES.includes(widget.id)), [widgets]);
+  const profileInstances = useMemo(() => instances.filter((instance) => PROFILE_WIDGET_TYPES.includes(instance.templateId)), [instances]);
+
+  const load = () => Promise.all([api('/api/widgets'), api('/api/instances')])
+    .then(([widgetResponse, instanceResponse]) => {
+      setWidgets(widgetResponse.widgets || []);
+      setInstances(instanceResponse.instances || []);
+    })
+    .catch((loadError) => setError(loadError.message));
+
+  useEffect(() => { load(); }, []);
+
+  const currentTemplate = profileWidgets.find((widget) => widget.id === form.templateId);
+  const set = (key, value) => setForm((current) => ({ ...current, [key]: value }));
+  const setConfig = (key, value) => setForm((current) => ({ ...current, config: { ...current.config, [key]: value } }));
+
+  const create = async (event) => {
+    event.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
+      const config = {
+        profileWidget: true,
+        delivery: 'discord-profile-board',
+        discordPublishStatus: 'early-access-required',
+        boardTitle: form.config.boardTitle,
+        boardSubtitle: form.config.boardSubtitle,
+        imageUrl: form.config.imageUrl
+      };
+      if (form.templateId === 'custom-stats') {
+        config.title = form.config.title;
+        config.message = form.config.message;
+        config.stats = form.config.statsText.split(/\n/).map((line) => {
+          const [label, ...rest] = line.split('=');
+          return { label: label.trim(), value: rest.join('=').trim() };
+        }).filter((item) => item.label);
+      }
+      await api('/api/v2/instances', {
+        method: 'POST',
+        body: JSON.stringify({ ...form, config })
+      });
+      setForm({ ...emptyForm, templateId: form.templateId });
+      await load();
+      setPage('board');
+    } catch (createError) {
+      setError(createError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return <div className="profile-deck-shell">
+    <aside className="profile-deck-sidebar">
+      <div className="profile-brand"><div className="profile-brand-mark">N</div><div><strong>NekoDeck</strong><span>Profile Widgets</span></div></div>
+      <nav>
+        <button className={page === 'board' ? 'active' : ''} onClick={() => setPage('board')}><LayoutDashboard size={18}/>Profile Board <b>{profileInstances.length}</b></button>
+        <button className={page === 'new' ? 'active' : ''} onClick={() => setPage('new')}><Plus size={18}/>Add Data Source</button>
+        <button className={page === 'discord' ? 'active' : ''} onClick={() => setPage('discord')}><ShieldCheck size={18}/>Discord Access</button>
+      </nav>
+      <div className="profile-sidebar-bottom">
+        <button onClick={onClassic}><Activity size={17}/>Classic Utilities</button>
+        <a href="https://github.com/NekoSuneProjects/NekoDeck" target="_blank" rel="noreferrer"><Github size={17}/>GitHub</a>
+      </div>
+    </aside>
+
+    <main className="profile-deck-main">
+      <header className="profile-page-header">
+        <div>
+          <span className="profile-kicker">Discord Profile Board pipeline</span>
+          <h1>{page === 'board' ? 'Profile Widgets' : page === 'new' ? 'Add a Profile Data Source' : 'Discord Game Stats Access'}</h1>
+          <p>{page === 'board' ? 'Build and preview stat cards for Discord-style Profile Boards without treating them as Activities.' : page === 'new' ? 'Connect a provider, choose how the card should look, and keep credentials encrypted on your NekoDeck server.' : 'NekoDeck is ready to supply data; Discord controls actual Game Stats publishing through early access.'}</p>
+        </div>
+        <div className="profile-header-actions">
+          <button onClick={load}><RefreshCw size={16}/>Refresh</button>
+          {page !== 'new' && <button className="profile-primary" onClick={() => setPage('new')}><Plus size={16}/>Add Widget</button>}
+        </div>
+      </header>
+
+      {error && <div className="profile-error">{error}<button onClick={() => setError('')}><X size={15}/></button></div>}
+
+      {page === 'board' && <section>
+        <div className="profile-summary-grid">
+          <div><span>Configured</span><strong>{profileInstances.length}</strong><small>Profile data sources</small></div>
+          <div><span>NekoDeck pipeline</span><strong>Ready</strong><small>Fetch · normalize · preview</small></div>
+          <div><span>Discord publishing</span><strong>Early Access</strong><small>Approval required</small></div>
+        </div>
+        <div className="profile-section-heading">
+          <div><h2>Your Profile Board</h2><p>These are NekoDeck previews. Open a card to fetch live provider data.</p></div>
+          <StatusPill kind="warning">Discord publish not enabled</StatusPill>
+        </div>
+        {profileInstances.length ? <div className="profile-board-grid">
+          {profileInstances.map((instance) => {
+            const widget = profileWidgets.find((item) => item.id === instance.templateId);
+            return <div className="profile-board-item" key={instance.id}>
+              <ProfileCard instance={instance} widget={widget}/>
+              <div className="profile-board-actions">
+                <div>
+                  <StatusPill kind={GAME_CANDIDATES.has(instance.templateId) ? 'candidate' : 'neutral'}>{GAME_CANDIDATES.has(instance.templateId) ? 'Game-stats candidate' : 'NekoDeck preview'}</StatusPill>
+                  <StatusPill kind={instance.credentialStatus?.discordClientSecret ? 'ready' : 'warning'}>{instance.credentialStatus?.discordClientSecret ? 'Discord app linked' : 'Discord app missing'}</StatusPill>
+                </div>
+                <button onClick={() => setSelected(instance)}>Open data <ChevronRight size={15}/></button>
+              </div>
+            </div>;
+          })}
+        </div> : <div className="profile-empty"><Sparkles size={26}/><h3>No Profile Widgets yet</h3><p>Create a data source and NekoDeck will build a Discord-style Board preview for it.</p><button className="profile-primary" onClick={() => setPage('new')}><Plus size={16}/>Create first widget</button></div>}
+      </section>}
+
+      {page === 'new' && <form className="profile-create" onSubmit={create}>
+        <section>
+          <h2>1. Data source</h2>
+          <div className="profile-form-grid">
+            <label>Template<select value={form.templateId} onChange={(event) => set('templateId', event.target.value)}>{profileWidgets.map((widget) => <option value={widget.id} key={widget.id}>{widget.name}</option>)}</select></label>
+            <label>Widget name<input required value={form.name} onChange={(event) => set('name', event.target.value)} placeholder="My Profile Stats"/></label>
+          </div>
+          <p className="profile-form-help">{currentTemplate?.description}</p>
+        </section>
+
+        <section>
+          <h2>2. Discord application <small>account linking / future Game Stats publishing</small></h2>
+          <label>Client ID<input required value={form.discordClientId} onChange={(event) => set('discordClientId', event.target.value)} placeholder="Discord Application ID"/></label>
+          <label>Client Secret<input required type="password" value={form.discordClientSecret} onChange={(event) => set('discordClientSecret', event.target.value)} placeholder="Stored encrypted"/></label>
+          <label>Bot Token <small>optional</small><input type="password" value={form.botToken} onChange={(event) => set('botToken', event.target.value)} placeholder="Only if your integration needs a bot"/></label>
+        </section>
+
+        {providerFields(form.templateId).length > 0 && <section>
+          <h2>3. Provider credentials <small>AES-256-GCM at rest</small></h2>
+          {providerFields(form.templateId).map((key) => <label key={key}>{providerFieldLabel(form.templateId, key)}<input required type={key === 'providerClientId' ? 'text' : 'password'} value={form[key]} onChange={(event) => set(key, event.target.value)} placeholder={key === 'providerSession' ? 'Authenticated cookie/session — never your password' : ''}/></label>)}
+          {['rockstar', 'vrchat'].includes(form.templateId) && <div className="profile-note"><ShieldCheck size={16}/><span>NekoDeck stores only the session value you provide. Do not paste account passwords into NekoDeck.</span></div>}
+        </section>}
+
+        <section>
+          <h2>{form.templateId === 'custom-stats' ? '4. Custom card' : '4. Profile Board appearance'} <small>optional overrides</small></h2>
+          <div className="profile-form-grid">
+            <label>Board title<input value={form.config.boardTitle} onChange={(event) => setConfig('boardTitle', event.target.value)} placeholder="Usually filled from provider data"/></label>
+            <label>Subtitle<input value={form.config.boardSubtitle} onChange={(event) => setConfig('boardSubtitle', event.target.value)} placeholder="Server, region, status…"/></label>
+          </div>
+          <label>Hero / character image URL<input value={form.config.imageUrl} onChange={(event) => setConfig('imageUrl', event.target.value)} placeholder="https://…/image.png"/></label>
+          {form.templateId === 'custom-stats' && <>
+            <label>Card title<input value={form.config.title} onChange={(event) => setConfig('title', event.target.value)}/></label>
+            <label>Message<textarea value={form.config.message} onChange={(event) => setConfig('message', event.target.value)}/></label>
+            <label>Stats <small>one per line: Label=Value</small><textarea value={form.config.statsText} onChange={(event) => setConfig('statsText', event.target.value)}/></label>
+          </>}
+        </section>
+
+        <div className="profile-create-footer">
+          <div><ShieldCheck size={17}/><span>This creates a Profile Board data source. It does <b>not</b> create a Discord Activity route.</span></div>
+          <button className="profile-primary" disabled={busy}>{busy ? 'Creating…' : 'Create Profile Widget'}</button>
+        </div>
+      </form>}
+
+      {page === 'discord' && <DiscordAccess/>}
+    </main>
+
+    {selected && <Runner instance={selected} widget={profileWidgets.find((widget) => widget.id === selected.templateId)} onClose={() => setSelected(null)}/>} 
+  </div>;
+}
+
+function DiscordAccess() {
+  return <div className="discord-access-grid">
+    <section className="discord-access-card featured">
+      <div className="discord-access-icon"><ShieldCheck size={22}/></div>
+      <span className="profile-kicker">Current status</span>
+      <h2>Discord Game Stats is Early Access</h2>
+      <p>NekoDeck can prepare account-linked data and Discord-style Board previews now. Actual cards on a user's Discord Profile Board are controlled by Discord and are not exposed as a general self-service widget API.</p>
+      <div className="discord-access-steps">
+        <div><b>1</b><span><strong>Build the provider pipeline</strong><small>Already handled by NekoDeck.</small></span></div>
+        <div><b>2</b><span><strong>Apply to Discord Developer Solutions</strong><small>Discord decides whether your project receives Game Stats access.</small></span></div>
+        <div><b>3</b><span><strong>Implement Discord's approved contract</strong><small>NekoDeck can then adapt its normalized stats output to the approved integration.</small></span></div>
+      </div>
+      <button className="profile-primary" onClick={() => window.open(DISCORD_DEV_CONTACT, '_blank', 'noopener')}><ShieldCheck size={16}/>Request Early Access</button>
+    </section>
+
+    <section className="discord-access-card">
+      <span className="profile-kicker">No game ownership?</span>
+      <h2>You can ask, but approval is not documented for generic widget aggregators.</h2>
+      <p>Discord's current Business Development form is written for game projects and asks about commercial availability, multiplayer support, target platforms, studio size and a Project/Game Name. NekoDeck therefore treats third-party-provider cards as previews until Discord explicitly approves the use case.</p>
+      <div className="profile-note"><ShieldCheck size={16}/><span>Do not impersonate a game developer or claim ownership of Steam, Rockstar, VRChat, Spotify, Last.fm, Tracker Network, or another provider when applying.</span></div>
+    </section>
+
+    <section className="discord-access-card">
+      <span className="profile-kicker">NekoDeck architecture</span>
+      <h2>Ready for an approved integration</h2>
+      <div className="pipeline">
+        <span>Provider account</span><ChevronRight/><span>NekoDeck encrypted credentials</span><ChevronRight/><span>Normalized stats</span><ChevronRight/><span>Profile Board adapter</span>
+      </div>
+      <p>If Discord provides an early-access schema or API to your project, the final adapter can be added without rebuilding the provider integrations.</p>
+    </section>
+  </div>;
+}
+
+function Runner({ instance, widget, onClose }) {
+  const [query, setQuery] = useState('');
+  const [mode, setMode] = useState(instance.templateId === 'trn' ? 'apex' : 'Skills');
+  const [platform, setPlatform] = useState('origin');
+  const [data, setData] = useState(instance.templateId === 'custom-stats' ? { custom: instance.config } : null);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const run = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      let url = '';
+      switch (instance.templateId) {
+        case 'trn':
+          url = `/api/widgets/trn/${instance.id}/player?game=${mode}&platform=${platform}&player=${encodeURIComponent(query)}`;
+          break;
+        case 'steam':
+          url = `/api/widgets/steam/${instance.id}/player?player=${encodeURIComponent(query)}`;
+          break;
+        case 'lastfm':
+          url = `/api/widgets/lastfm/${instance.id}/user?user=${encodeURIComponent(query)}`;
+          break;
+        case 'vrchat':
+          url = `/api/widgets/vrchat/${instance.id}/me`;
+          break;
+        case 'rockstar':
+          url = `/api/widgets/rockstar/${instance.id}/stats?nickname=${encodeURIComponent(query)}&category=${mode}`;
+          break;
+        case 'spotify':
+          url = `/api/widgets/spotify/${instance.id}/profile`;
+          break;
+        case 'custom-stats':
+          setData({ custom: instance.config });
+          setBusy(false);
+          return;
+        default:
+          throw new Error('Unsupported Profile Widget provider');
+      }
+      setData(await api(url));
+    } catch (runError) {
+      setError(runError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const connectSpotify = async () => {
+    setError('');
+    try {
+      const response = await api(`/api/widgets/spotify/${instance.id}/connect`);
+      window.open(response.authUrl, '_blank', 'noopener');
+      setData({ spotifyConnect: true, redirectUri: response.redirectUri });
+    } catch (connectError) {
+      setError(connectError.message);
+    }
+  };
+
+  return <div className="profile-runner-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+    <div className="profile-runner">
+      <header>
+        <div><span className="profile-kicker">Profile Board data</span><h2>{instance.name}</h2><p>{widget?.name || instance.templateId}</p></div>
+        <button onClick={onClose}><X size={18}/></button>
+      </header>
+      <div className="profile-runner-grid">
+        <section className="profile-runner-controls">
+          {['trn', 'steam', 'lastfm', 'rockstar'].includes(instance.templateId) && <label>{instance.templateId === 'lastfm' ? 'Last.fm username' : instance.templateId === 'rockstar' ? 'Social Club nickname' : 'Player / username'}<input value={query} onChange={(event) => setQuery(event.target.value)}/></label>}
+          {instance.templateId === 'trn' && <div className="profile-form-grid"><label>Game<select value={mode} onChange={(event) => setMode(event.target.value)}><option value="apex">Apex Legends API</option><option value="fortnite">Fortnite profile link</option><option value="halo">Halo profile link</option></select></label><label>Platform<select value={platform} onChange={(event) => setPlatform(event.target.value)}><option value="origin">EA / Origin</option><option value="xbl">Xbox</option><option value="psn">PlayStation</option></select></label></div>}
+          {instance.templateId === 'rockstar' && <label>Category<select value={mode} onChange={(event) => setMode(event.target.value)}>{['Career', 'Skills', 'General', 'Crimes', 'Vehicles', 'Cash', 'Combat', 'Weapons'].map((item) => <option key={item}>{item}</option>)}</select></label>}
+          {instance.templateId === 'spotify' && <button className="spotify-connect" onClick={connectSpotify}><Music2 size={16}/>Connect Spotify</button>}
+          <button className="profile-primary" onClick={run} disabled={busy}>{busy ? 'Loading…' : 'Refresh Profile Stats'}</button>
+          {error && <div className="profile-error inline">{error}</div>}
+          <div className="profile-note"><ShieldCheck size={16}/><span>No Discord Activity route is generated here. This runner only prepares and previews Profile Board data.</span></div>
+          {data && <details className="profile-raw"><summary>Raw provider response</summary><button onClick={() => navigator.clipboard?.writeText(JSON.stringify(data, null, 2))}><Copy size={14}/>Copy JSON</button><pre>{JSON.stringify(data, null, 2)}</pre></details>}
+        </section>
+        <section className="profile-runner-preview">
+          <div className="profile-section-heading"><div><h3>Discord-style preview</h3><p>Visual approximation for designing the card before approval.</p></div><StatusPill kind="warning">Preview</StatusPill></div>
+          <ProfileCard instance={instance} widget={widget} data={data}/>
+          {data?.trackerUrl && <a className="tracker-link" href={data.trackerUrl} target="_blank" rel="noreferrer">Open Tracker Network profile <ChevronRight size={15}/></a>}
+          {data?.spotifyConnect && <div className="profile-note"><Music2 size={16}/><span>Finish Spotify authorization in the browser, then press Refresh Profile Stats.</span></div>}
+        </section>
+      </div>
+    </div>
+  </div>;
+}
+
+export default function AppV2() {
+  const [classic, setClassic] = useState(false);
+  if (location.pathname.startsWith('/activity/')) return <BaseApp/>;
+  if (classic) return <div className="classic-wrap"><BaseApp/><button className="classic-return" onClick={() => setClassic(false)}><Sparkles size={17}/>Profile Widgets</button></div>;
+  return <ProfileDeck onClassic={() => setClassic(true)}/>;
+}
