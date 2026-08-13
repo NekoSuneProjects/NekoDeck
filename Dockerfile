@@ -2,6 +2,8 @@
 # production dependencies are currently pure JavaScript, so they can be
 # prepared once and copied into both target runtime images without executing
 # Node under target-platform QEMU.
+ARG TARGETARCH=amd64
+
 FROM --platform=$BUILDPLATFORM node:22-alpine AS build
 WORKDIR /app
 COPY package*.json ./
@@ -15,12 +17,7 @@ WORKDIR /deps
 COPY package*.json ./
 RUN npm install --omit=dev --ignore-scripts && npm cache clean --force
 
-# Root's package builder launches a native .NET publishing executable. Use the
-# full Debian/glibc Node image so common runtime libraries such as ICU are
-# available to on-demand Root .pkg builds. This target stage intentionally has
-# no RUN commands, so amd64/arm64 images can still be assembled without
-# executing target binaries under QEMU.
-FROM node:22-bookworm AS runtime
+FROM node:22-bookworm AS runtime-base
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=3210 NEKODECK_DATA_DIR=/data
 WORKDIR /app
 COPY --chown=node:node package.json ./package.json
@@ -34,3 +31,12 @@ EXPOSE 3210
 VOLUME ["/data"]
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD ["node", "-e", "fetch('http://127.0.0.1:3210/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
 CMD ["node", "server/start.cjs"]
+
+FROM runtime-base AS runtime-amd64
+
+FROM runtime-base AS runtime-arm64
+USER root
+COPY --chown=node:node server/root-builds-arm64.cjs /app/server/root-builds.cjs
+USER node
+
+FROM runtime-${TARGETARCH} AS runtime
