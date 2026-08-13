@@ -3,7 +3,10 @@
   "version": "0.2.0",
   "private": true,
   "description": "Customisable Discord utility widget deck for desktop, web and Docker.",
-  "author": "NekoSuneVR / NekoSuneProjects",
+  "author": {
+    "name": "NekoSuneVR / NekoSuneProjects",
+    "email": "NekoSuneProjects@users.noreply.github.com"
+  },
   "license": "MIT",
   "main": "electron/main.cjs",
   "type": "module",
@@ -46,6 +49,7 @@
     "linux": {
       "target": [{"target":"AppImage","arch":["x64"]},{"target":"deb","arch":["x64"]}],
       "category": "Utility",
+      "maintainer": "NekoSuneProjects <NekoSuneProjects@users.noreply.github.com>",
       "artifactName": "NekoDeck-${version}-Linux-${arch}.${ext}"
     },
     "nsis": {"oneClick":false,"allowToChangeInstallationDirectory":true}
