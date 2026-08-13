@@ -17,3 +17,43 @@ jobs:
       - run: npm install --no-audit --no-fund
       - name: Build a real Root .pkg on Linux
         run: node scripts/root-pkg-smoke.cjs
+
+  root-pkg-docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build NekoDeck Docker image
+        run: docker build -t nekodeck-root-pkg-smoke .
+      - name: Start NekoDeck
+        run: docker run -d --name nekodeck-root-pkg-smoke -p 3210:3210 nekodeck-root-pkg-smoke
+      - name: Wait for API
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3210/api/health >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs nekodeck-root-pkg-smoke
+          exit 1
+      - name: Build Root .pkg through the NekoDeck API
+        run: |
+          response=$(curl --fail-with-body -sS \
+            -H 'Content-Type: application/json' \
+            -X POST http://127.0.0.1:3210/api/bots \
+            --data '{"name":"Docker Root PKG Smoke","description":"Container package smoke test","platforms":{"discord":false,"rootapp":true},"rootapp":{"projectId":"ACj4U-eThgmjXUOBAjk_jw","version":"0.0.1","settings":{},"permissions":{}},"commands":[{"name":"ping","description":"Smoke test","response":"Pong","discord":false,"rootapp":true}],"autoReplies":[]}')
+          printf '%s\n' "$response"
+          bot_id=$(printf '%s' "$response" | python3 -c 'import json,sys; print(json.load(sys.stdin)["bot"]["id"])')
+          test -n "$bot_id"
+          curl --fail-with-body -sS \
+            -o /tmp/rootapp.pkg \
+            "http://127.0.0.1:3210/api/bots/${bot_id}/export/root-pkg"
+          test -s /tmp/rootapp.pkg
+          ls -lh /tmp/rootapp.pkg
+      - name: Show NekoDeck logs on failure
+        if: failure()
+        run: docker logs nekodeck-root-pkg-smoke || true
+      - name: Stop container
+        if: always()
+        run: docker rm -f nekodeck-root-pkg-smoke || true
