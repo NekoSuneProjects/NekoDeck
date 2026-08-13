@@ -97,7 +97,11 @@ function addDirectoryToZip(zip, sourceDir, targetPrefix) {
       const nextRel = rel ? `${rel}/${item.name}` : item.name;
       const full = path.join(dir, item.name);
       if (item.isDirectory()) walk(full, nextRel);
-      else zip.addLocalFile(full, `${targetPrefix}/${path.posix.dirname(nextRel)}`.replace(/\/$/, ''), path.posix.basename(nextRel));
+      else {
+        const relDir = path.posix.dirname(nextRel);
+        const zipDir = relDir === '.' ? targetPrefix : `${targetPrefix}/${relDir}`;
+        zip.addLocalFile(full, zipDir, path.posix.basename(nextRel));
+      }
     }
   };
   walk(sourceDir);
@@ -150,7 +154,7 @@ function buildScaffoldZip(instance, dataDir) {
     },
     include: ['src/**/*.ts']
   };
-  const serverMain = `import { rootServer, RootAppStartState } from "@rootsdk/server-app";\n\nasync function onStarting(state: RootAppStartState) {\n  console.log("NekoDeck RootApp started for community", state?.community?.id ?? "unknown");\n}\n\nasync function onStopping() {\n  console.log("NekoDeck RootApp stopping");\n}\n\n(async () => {\n  await rootServer.lifecycle.start(onStarting, onStopping);\n})();\n`;
+  const serverMain = `import { rootServer } from "@rootsdk/server-app";\n\n(async () => {\n  await rootServer.lifecycle.start();\n})();\n`;
 
   zip.addFile('root-manifest.json', Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`));
   zip.addFile('package.json', Buffer.from(`${JSON.stringify(packageJson, null, 2)}\n`));
@@ -232,7 +236,8 @@ function registerRootAppRoutes(app, store, options = {}) {
       if (typeof req.body?.devToken === 'string' && req.body.devToken.trim()) secrets.rootDevToken = req.body.devToken.trim();
       if (typeof req.body?.authToken === 'string' && req.body.authToken.trim()) secrets.rootAuthToken = req.body.authToken.trim();
       if (Object.keys(secrets).length) store.mergeCredentials(req.params.id, secrets);
-      return res.json({ ok: true, instance: store.getPublicInstance(req.params.id), rootApp: publicRootConfig(store.getPublicInstance(req.params.id)) });
+      const updated = store.getPublicInstance(req.params.id);
+      return res.json({ ok: true, instance: updated, rootApp: publicRootConfig(updated) });
     } catch (error) {
       return jsonError(res, 400, error.message);
     }
