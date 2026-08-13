@@ -1,8 +1,8 @@
 {
   "name": "nekodeck",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "private": true,
-  "description": "Discord Profile Board widgets plus full web app, Unity WebGL and utility Activities for desktop, web and Docker.",
+  "description": "Discord Profile Board widgets plus managed web, Unity, Unreal-compatible and utility Activities for desktop, web and Docker.",
   "author": {
     "name": "NekoSuneVR / NekoSuneProjects",
     "email": "NekoSuneProjects@users.noreply.github.com"
@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@discord/embedded-app-sdk": "^2.5.0",
+    "adm-zip": "^0.5.16",
     "express": "^5.1.0",
     "helmet": "^8.1.0",
     "lucide-react": "^0.468.0",
