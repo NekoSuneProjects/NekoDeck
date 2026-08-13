@@ -2,7 +2,7 @@
 # production dependencies are currently pure JavaScript, so they can be
 # prepared once and copied into both target runtime images without executing
 # Node under target-platform QEMU.
-ARG TARGETARCH=amd64
+ARG TARGETARCH
 
 FROM --platform=$BUILDPLATFORM node:22-alpine AS build
 WORKDIR /app
