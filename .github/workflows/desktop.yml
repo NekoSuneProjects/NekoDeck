@@ -19,15 +19,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-      - run: npm install
+      - run: npm install --no-audit --no-fund
       - run: npm test
       - run: npm run build:win
       - uses: actions/upload-artifact@v4
         with:
           name: NekoDeck-Windows
-          path: |
-            release/*.exe
+          path: release/*.exe
           if-no-files-found: error
 
   linux:
@@ -37,8 +35,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-      - run: npm install
+      - run: npm install --no-audit --no-fund
       - run: npm test
       - run: npm run build:linux
       - uses: actions/upload-artifact@v4
