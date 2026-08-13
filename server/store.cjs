@@ -62,6 +62,7 @@ function createStore(dataDir) {
     getPrivateInstance(id){const i=read().instances.find(x=>x.id===id);return i?{...i,credentials:credentialsFor(i)}:null},
     createInstance(input){const db=read(),now=new Date().toISOString(),i={id:crypto.randomUUID(),templateId:input.templateId,name:input.name,createdAt:now,updatedAt:now,config:input.config||{},state:{},secrets:encryptJson(input.credentials||{},key)};db.instances.unshift(i);write(db);return publicInstance(i)},
     deleteInstance(id){const db=read(),before=db.instances.length;db.instances=db.instances.filter(x=>x.id!==id);write(db);return db.instances.length!==before},
+    updateName(id,name){const db=read(),i=db.instances.find(x=>x.id===id);if(!i)return null;i.name=String(name||'').trim()||i.name;i.updatedAt=new Date().toISOString();write(db);return publicInstance(i)},
     mergeCredentials(id,patch){const db=read(),i=db.instances.find(x=>x.id===id);if(!i)return null;const current=credentialsFor(i);i.secrets=encryptJson({...current,...(patch||{})},key);i.updatedAt=new Date().toISOString();write(db);return publicInstance(i)},
     updateConfig(id,patch){const db=read(),i=db.instances.find(x=>x.id===id);if(!i)return null;i.config={...(i.config||{}),...(patch||{})};i.updatedAt=new Date().toISOString();write(db);return publicInstance(i)},
     getState(id){const i=read().instances.find(x=>x.id===id);return i?(i.state||{}):null},
