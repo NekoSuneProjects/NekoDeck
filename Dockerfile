@@ -15,12 +15,12 @@ WORKDIR /deps
 COPY package*.json ./
 RUN npm install --omit=dev --ignore-scripts && npm cache clean --force
 
-# Root's package builder launches a native publishing executable. Use a glibc
-# runtime (Debian) rather than Alpine/musl so on-demand Root .pkg builds have a
-# compatible native runtime. This target stage intentionally has no RUN
-# commands, so amd64/arm64 images can still be assembled without executing
-# target binaries under QEMU.
-FROM node:22-bookworm-slim AS runtime
+# Root's package builder launches a native .NET publishing executable. Use the
+# full Debian/glibc Node image so common runtime libraries such as ICU are
+# available to on-demand Root .pkg builds. This target stage intentionally has
+# no RUN commands, so amd64/arm64 images can still be assembled without
+# executing target binaries under QEMU.
+FROM node:22-bookworm AS runtime
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=3210 NEKODECK_DATA_DIR=/data
 WORKDIR /app
 COPY --chown=node:node package.json ./package.json
