@@ -15,21 +15,32 @@ jobs:
         with:
           node-version: 22
       - run: npm install --no-audit --no-fund
-      - name: Build a real Root .pkg on Linux
+      - name: Build a real Root .pkg on Linux x64
         run: node scripts/root-pkg-smoke.cjs
 
-  root-pkg-docker:
+  root-pkg-docker-arm64:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
-      - name: Build NekoDeck Docker image
-        run: docker build -t nekodeck-root-pkg-smoke .
-      - name: Start NekoDeck
-        run: docker run -d --name nekodeck-root-pkg-smoke -p 3210:3210 nekodeck-root-pkg-smoke
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build ARM64 NekoDeck Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/arm64
+          load: true
+          tags: nekodeck-root-pkg-smoke:arm64
+      - name: Start ARM64 NekoDeck
+        run: docker run --platform linux/arm64 -d --name nekodeck-root-pkg-smoke -p 3210:3210 nekodeck-root-pkg-smoke:arm64
       - name: Wait for API
         run: |
-          for attempt in $(seq 1 60); do
+          for attempt in $(seq 1 90); do
             if curl -fsS http://127.0.0.1:3210/api/health >/dev/null; then
               exit 0
             fi
@@ -37,17 +48,18 @@ jobs:
           done
           docker logs nekodeck-root-pkg-smoke
           exit 1
-      - name: Build Root .pkg through the NekoDeck API
+      - name: Build Root .pkg through the ARM64 NekoDeck API
         run: |
           response=$(curl --fail-with-body -sS \
             -H 'Content-Type: application/json' \
             -X POST http://127.0.0.1:3210/api/bots \
-            --data '{"name":"Docker Root PKG Smoke","description":"Container package smoke test","platforms":{"discord":false,"rootapp":true},"rootapp":{"projectId":"ACj4U-eThgmjXUOBAjk_jw","version":"0.0.1","settings":{},"permissions":{}},"commands":[{"name":"ping","description":"Smoke test","response":"Pong","discord":false,"rootapp":true}],"autoReplies":[]}')
+            --data '{"name":"ARM64 Root PKG Smoke","description":"ARM64 container package smoke test","platforms":{"discord":false,"rootapp":true},"rootapp":{"projectId":"ACj4U-eThgmjXUOBAjk_jw","version":"0.0.1","settings":{},"permissions":{}},"commands":[{"name":"ping","description":"Smoke test","response":"Pong","discord":false,"rootapp":true}],"autoReplies":[]}')
           printf '%s\n' "$response"
           bot_id=$(printf '%s' "$response" | python3 -c 'import json,sys; print(json.load(sys.stdin)["bot"]["id"])')
           test -n "$bot_id"
 
           status=$(curl -sS \
+            -D /tmp/root-package-headers \
             -o /tmp/root-package-response \
             -w '%{http_code}' \
             "http://127.0.0.1:3210/api/bots/${bot_id}/export/root-pkg")
@@ -56,9 +68,23 @@ jobs:
             cat /tmp/root-package-response
             exit 1
           fi
+          grep -qi 'X-NekoDeck-Root-Package: built-js-arm64' /tmp/root-package-headers
           mv /tmp/root-package-response /tmp/rootapp.pkg
           test -s /tmp/rootapp.pkg
+          tar -tzf /tmp/rootapp.pkg | grep -qx 'server.tar.gz'
+          tar -tzf /tmp/rootapp.pkg | grep -qx 'client.tar.gz'
+          tar -tzf /tmp/rootapp.pkg | grep -qx 'root-manifest.json'
           ls -lh /tmp/rootapp.pkg
+      - name: Verify ARM64 upload limitation is explicit
+        run: |
+          bot_id=$(curl -sS \
+            -H 'Content-Type: application/json' \
+            -X POST http://127.0.0.1:3210/api/bots \
+            --data '{"name":"ARM64 Upload Smoke","platforms":{"discord":false,"rootapp":true},"rootapp":{"projectId":"ACj4U-eThgmjXUOBAjk_jw","version":"0.0.1"},"commands":[{"name":"ping","description":"Smoke","response":"Pong","rootapp":true}],"autoReplies":[]}' \
+            | python3 -c 'import json,sys; print(json.load(sys.stdin)["bot"]["id"])')
+          status=$(curl -sS -o /tmp/upload-response -w '%{http_code}' -X POST "http://127.0.0.1:3210/api/bots/${bot_id}/publish/root")
+          test "$status" = "501"
+          grep -q 'linux-arm64' /tmp/upload-response
       - name: Show NekoDeck logs on failure
         if: failure()
         run: docker logs nekodeck-root-pkg-smoke || true
