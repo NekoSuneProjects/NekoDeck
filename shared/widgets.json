@@ -1,0 +1,92 @@
+[
+  {
+    "id": "hypixel",
+    "name": "Hypixel Tracker",
+    "category": "Gaming",
+    "icon": "Blocks",
+    "description": "Track Hypixel player network stats through the official Hypixel Public API.",
+    "credentials": ["discordClientId", "discordClientSecret", "hypixelApiKey"],
+    "botToken": "optional",
+    "status": "ready"
+  },
+  {
+    "id": "battlefield",
+    "name": "Battlefield Tracker",
+    "category": "Gaming",
+    "icon": "Crosshair",
+    "description": "Player stats for Battlefield 1, V, 2042, 6 and other supported titles using the community GameTools API.",
+    "credentials": ["discordClientId", "discordClientSecret"],
+    "botToken": "optional",
+    "status": "ready"
+  },
+  {
+    "id": "system-monitor",
+    "name": "System Monitor",
+    "category": "Utility",
+    "icon": "Activity",
+    "description": "CPU, memory, uptime and host information from the NekoDeck host.",
+    "credentials": ["discordClientId", "discordClientSecret"],
+    "botToken": "optional",
+    "status": "ready"
+  },
+  {
+    "id": "status-check",
+    "name": "Status Checker",
+    "category": "Utility",
+    "icon": "Wifi",
+    "description": "Check whether a website or API endpoint is responding and measure latency.",
+    "credentials": ["discordClientId", "discordClientSecret"],
+    "botToken": "optional",
+    "status": "ready"
+  },
+  {
+    "id": "timer",
+    "name": "Shared Timer",
+    "category": "Social",
+    "icon": "Timer",
+    "description": "A clean countdown/timer panel suitable for Discord Activity rooms.",
+    "credentials": ["discordClientId", "discordClientSecret"],
+    "botToken": "optional",
+    "status": "ready"
+  },
+  {
+    "id": "notes",
+    "name": "Shared Notes",
+    "category": "Social",
+    "icon": "NotebookPen",
+    "description": "Quick shared notes and planning board for a Discord group.",
+    "credentials": ["discordClientId", "discordClientSecret"],
+    "botToken": "optional",
+    "status": "ready"
+  },
+  {
+    "id": "counter",
+    "name": "Live Counter",
+    "category": "Social",
+    "icon": "PlusMinus",
+    "description": "Simple increment/decrement counter with a large display.",
+    "credentials": ["discordClientId", "discordClientSecret"],
+    "botToken": "optional",
+    "status": "ready"
+  },
+  {
+    "id": "random-picker",
+    "name": "Random Picker",
+    "category": "Social",
+    "icon": "Dices",
+    "description": "Randomly pick a name, option, map or task from a list.",
+    "credentials": ["discordClientId", "discordClientSecret"],
+    "botToken": "optional",
+    "status": "ready"
+  },
+  {
+    "id": "custom-api",
+    "name": "Custom API Widget",
+    "category": "Developer",
+    "icon": "Braces",
+    "description": "Starter template for connecting a JSON API to a custom NekoDeck widget.",
+    "credentials": ["discordClientId", "discordClientSecret"],
+    "botToken": "optional",
+    "status": "ready"
+  }
+]
