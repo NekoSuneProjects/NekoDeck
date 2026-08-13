@@ -1,4 +1,4 @@
-const { createApp } = require('./v2.cjs');
+const { createApp } = require('./v3.cjs');
 
 const host = process.env.HOST || '0.0.0.0';
 const port = Number(process.env.PORT || 3210);
