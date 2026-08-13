@@ -15,4 +15,10 @@ services:
       # Optional fixed encryption secret (otherwise /data/master.key is generated):
       # NEKODECK_MASTER_KEY: change-me-too
     volumes:
-      - ./data:/data
+      # Named volume preserves the image's node-user ownership for /data.
+      # If you prefer a bind mount such as ./data:/data, ensure the host
+      # directory is writable by UID/GID 1000:1000 before starting NekoDeck.
+      - nekodeck-data:/data
+
+volumes:
+  nekodeck-data:
