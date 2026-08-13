@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import AppV2 from './AppV2.jsx';
 import ActivityStudioV3 from './ActivityStudioV3.jsx';
 import ProfileWidgetManager from './ProfileWidgetManager.jsx';
+import AppSystems from './AppSystems.jsx';
 import './styles.css';
 
 createRoot(document.getElementById('root')).render(
@@ -10,5 +11,6 @@ createRoot(document.getElementById('root')).render(
     <AppV2 />
     <ActivityStudioV3 />
     <ProfileWidgetManager />
+    <AppSystems />
   </React.StrictMode>
 );

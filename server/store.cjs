@@ -55,7 +55,7 @@ function createStore(dataDir) {
       throw wrapped;
     }
   }
-  function publicInstance(item){const c=credentialsFor(item);return {id:item.id,templateId:item.templateId,name:item.name,createdAt:item.createdAt,updatedAt:item.updatedAt,config:item.config||{},credentialStatus:{discordClientId:Boolean(c.discordClientId),discordClientSecret:Boolean(c.discordClientSecret),botToken:Boolean(c.botToken),providerApiKey:Boolean(c.providerApiKey),providerClientId:Boolean(c.providerClientId),providerClientSecret:Boolean(c.providerClientSecret),providerSession:Boolean(c.providerSession),providerConnected:Boolean(c.refreshToken||c.accessToken)},discordClientId:c.discordClientId||null}}
+  function publicInstance(item){const c=credentialsFor(item);return {id:item.id,templateId:item.templateId,name:item.name,createdAt:item.createdAt,updatedAt:item.updatedAt,config:item.config||{},credentialStatus:{discordClientId:Boolean(c.discordClientId),discordClientSecret:Boolean(c.discordClientSecret),botToken:Boolean(c.botToken),providerApiKey:Boolean(c.providerApiKey),providerClientId:Boolean(c.providerClientId),providerClientSecret:Boolean(c.providerClientSecret),providerSession:Boolean(c.providerSession),providerConnected:Boolean(c.refreshToken||c.accessToken),rootDevToken:Boolean(c.rootDevToken),rootAuthToken:Boolean(c.rootAuthToken)},discordClientId:c.discordClientId||null}}
   return {
     listInstances(){return read().instances.map(publicInstance)},
     getPublicInstance(id){const i=read().instances.find(x=>x.id===id);return i?publicInstance(i):null},

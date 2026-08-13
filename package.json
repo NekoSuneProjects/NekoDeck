@@ -1,8 +1,8 @@
 {
   "name": "nekodeck",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
-  "description": "Discord Profile Board widgets plus managed web, Unity, Unreal-compatible and utility Activities for desktop, web and Docker.",
+  "description": "Multi-platform app system for Discord and RootApp, with Profile Board widgets plus managed web, Unity, Unreal-compatible and utility apps.",
   "author": {
     "name": "NekoSuneVR / NekoSuneProjects",
     "email": "NekoSuneProjects@users.noreply.github.com"
