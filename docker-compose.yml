@@ -14,6 +14,11 @@ services:
       # NEKODECK_API_TOKEN: change-me
       # Optional fixed encryption secret (otherwise /data/master.key is generated):
       # NEKODECK_MASTER_KEY: change-me-too
+      # Activity build/upload limits (defaults shown):
+      # NEKODECK_ACTIVITY_MAX_FILE_BYTES: 536870912          # 512 MiB per file
+      # NEKODECK_ACTIVITY_MAX_ARCHIVE_BYTES: 1073741824      # 1 GiB ZIP upload
+      # NEKODECK_ACTIVITY_MAX_EXTRACTED_BYTES: 2147483648    # 2 GiB expanded ZIP
+      # NEKODECK_ACTIVITY_MAX_ZIP_ENTRIES: 20000
     volumes:
       # Named volume preserves the image's node-user ownership for /data.
       # If you prefer a bind mount such as ./data:/data, ensure the host
