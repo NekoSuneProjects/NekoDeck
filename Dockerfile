@@ -1,7 +1,7 @@
-# Build the web bundle on the native GitHub runner platform. The NekoDeck
-# runtime dependencies are pure JavaScript, so they can be prepared once and
-# copied into both amd64 and arm64 runtime images without executing Node under
-# QEMU (which is unreliable with the current Node 22 Alpine image).
+# Build the web bundle on the native GitHub runner platform. NekoDeck's
+# production dependencies are currently pure JavaScript, so they can be
+# prepared once and copied into both target runtime images without executing
+# Node under target-platform QEMU.
 FROM --platform=$BUILDPLATFORM node:22-alpine AS build
 WORKDIR /app
 COPY package*.json ./
@@ -15,10 +15,12 @@ WORKDIR /deps
 COPY package*.json ./
 RUN npm install --omit=dev --ignore-scripts && npm cache clean --force
 
-# This stage is resolved independently for each TARGETPLATFORM. It intentionally
-# contains no RUN commands, so an ARM64 image can be assembled on an x64 runner
-# without running npm/node through QEMU.
-FROM node:22-alpine AS runtime
+# Root's package builder launches a native publishing executable. Use a glibc
+# runtime (Debian) rather than Alpine/musl so on-demand Root .pkg builds have a
+# compatible native runtime. This target stage intentionally has no RUN
+# commands, so amd64/arm64 images can still be assembled without executing
+# target binaries under QEMU.
+FROM node:22-bookworm-slim AS runtime
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=3210 NEKODECK_DATA_DIR=/data
 WORKDIR /app
 COPY --chown=node:node package.json ./package.json
@@ -30,5 +32,5 @@ COPY --chown=node:node --from=build /empty-data /data
 USER node
 EXPOSE 3210
 VOLUME ["/data"]
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD wget -q -O - http://127.0.0.1:3210/api/health >/dev/null || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD ["node", "-e", "fetch('http://127.0.0.1:3210/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
 CMD ["node", "server/start.cjs"]
