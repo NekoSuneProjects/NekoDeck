@@ -1,3 +1,9 @@
+// Root's native package/publish CLI is a .NET executable. Minimal Docker
+// runtimes may not include libicu; .NET explicitly supports invariant mode for
+// that case. Respect an operator override, otherwise enable the fallback before
+// any Root build subprocesses are launched.
+process.env.DOTNET_SYSTEM_GLOBALIZATION_INVARIANT ||= '1';
+
 const { createApp: createBaseApp } = require('./app.cjs');
 const { registerV2 } = require('./v2.cjs');
 const { registerActivityManagementRoutes } = require('./activity-management.cjs');
