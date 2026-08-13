@@ -1,6 +1,6 @@
 {
   "name": "nekodeck",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "private": true,
   "description": "Multi-platform Discord and RootApp builder with profile widgets, Activities, apps, Discord.js bots, Root bots, and ready-to-publish Root .pkg builds.",
   "author": {
@@ -28,7 +28,8 @@
     "helmet": "^8.1.0",
     "lucide-react": "^0.468.0",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "tar": "^7.5.19"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.7.0",
