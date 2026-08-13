@@ -1,92 +1,18 @@
 [
-  {
-    "id": "hypixel",
-    "name": "Hypixel Tracker",
-    "category": "Gaming",
-    "icon": "Blocks",
-    "description": "Track Hypixel player network stats through the official Hypixel Public API.",
-    "credentials": ["discordClientId", "discordClientSecret", "hypixelApiKey"],
-    "botToken": "optional",
-    "status": "ready"
-  },
-  {
-    "id": "battlefield",
-    "name": "Battlefield Tracker",
-    "category": "Gaming",
-    "icon": "Crosshair",
-    "description": "Player stats for Battlefield 1, V, 2042, 6 and other supported titles using the community GameTools API.",
-    "credentials": ["discordClientId", "discordClientSecret"],
-    "botToken": "optional",
-    "status": "ready"
-  },
-  {
-    "id": "system-monitor",
-    "name": "System Monitor",
-    "category": "Utility",
-    "icon": "Activity",
-    "description": "CPU, memory, uptime and host information from the NekoDeck host.",
-    "credentials": ["discordClientId", "discordClientSecret"],
-    "botToken": "optional",
-    "status": "ready"
-  },
-  {
-    "id": "status-check",
-    "name": "Status Checker",
-    "category": "Utility",
-    "icon": "Wifi",
-    "description": "Check whether a website or API endpoint is responding and measure latency.",
-    "credentials": ["discordClientId", "discordClientSecret"],
-    "botToken": "optional",
-    "status": "ready"
-  },
-  {
-    "id": "timer",
-    "name": "Shared Timer",
-    "category": "Social",
-    "icon": "Timer",
-    "description": "A clean countdown/timer panel suitable for Discord Activity rooms.",
-    "credentials": ["discordClientId", "discordClientSecret"],
-    "botToken": "optional",
-    "status": "ready"
-  },
-  {
-    "id": "notes",
-    "name": "Shared Notes",
-    "category": "Social",
-    "icon": "NotebookPen",
-    "description": "Quick shared notes and planning board for a Discord group.",
-    "credentials": ["discordClientId", "discordClientSecret"],
-    "botToken": "optional",
-    "status": "ready"
-  },
-  {
-    "id": "counter",
-    "name": "Live Counter",
-    "category": "Social",
-    "icon": "PlusMinus",
-    "description": "Simple increment/decrement counter with a large display.",
-    "credentials": ["discordClientId", "discordClientSecret"],
-    "botToken": "optional",
-    "status": "ready"
-  },
-  {
-    "id": "random-picker",
-    "name": "Random Picker",
-    "category": "Social",
-    "icon": "Dices",
-    "description": "Randomly pick a name, option, map or task from a list.",
-    "credentials": ["discordClientId", "discordClientSecret"],
-    "botToken": "optional",
-    "status": "ready"
-  },
-  {
-    "id": "custom-api",
-    "name": "Custom API Widget",
-    "category": "Developer",
-    "icon": "Braces",
-    "description": "Starter template for connecting a JSON API to a custom NekoDeck widget.",
-    "credentials": ["discordClientId", "discordClientSecret"],
-    "botToken": "optional",
-    "status": "ready"
-  }
+  {"id":"hypixel","name":"Hypixel Tracker","category":"Gaming","icon":"Blocks","description":"Track Hypixel player network stats through the official Hypixel Public API.","credentials":["discordClientId","discordClientSecret","providerApiKey"],"provider":{"name":"Hypixel","apiKeyLabel":"Hypixel API Key","required":["providerApiKey"]},"botToken":"optional","status":"ready"},
+  {"id":"battlefield","name":"Battlefield Tracker","category":"Gaming","icon":"Crosshair","description":"Player stats for Battlefield titles using the community GameTools API.","credentials":["discordClientId","discordClientSecret"],"botToken":"optional","status":"ready"},
+  {"id":"trn","name":"Tracker Network (TRN)","category":"Gaming","icon":"Trophy","description":"Tracker Network profile widget. Apex uses TRN's public API; Fortnite/Halo open profiles without scraping.","credentials":["discordClientId","discordClientSecret","providerApiKey"],"provider":{"name":"Tracker Network","apiKeyLabel":"TRN API Key","required":["providerApiKey"]},"botToken":"optional","status":"ready"},
+  {"id":"steam","name":"Steam Stats","category":"Gaming","icon":"Gamepad2","description":"Steam profile, owned games, playtime and top-played titles using the Steam Web API.","credentials":["discordClientId","discordClientSecret","providerApiKey"],"provider":{"name":"Steam","apiKeyLabel":"Steam Web API Key","required":["providerApiKey"]},"botToken":"optional","status":"ready"},
+  {"id":"rockstar","name":"GTA V / Rockstar Stats","category":"Gaming","icon":"Gauge","description":"Experimental GTA Online Social Club stats using an existing authenticated Social Club session.","credentials":["discordClientId","discordClientSecret","providerSession"],"provider":{"name":"Rockstar Social Club","sessionLabel":"Social Club Cookie","required":["providerSession"],"experimental":true},"botToken":"optional","status":"experimental"},
+  {"id":"vrchat","name":"VRChat Stats","category":"Social","icon":"Users","description":"VRChat account summary from an existing VRChat auth session.","credentials":["discordClientId","discordClientSecret","providerSession"],"provider":{"name":"VRChat","sessionLabel":"VRChat auth cookie","required":["providerSession"],"experimental":true},"botToken":"optional","status":"experimental"},
+  {"id":"lastfm","name":"Last.fm Listening Stats","category":"Music","icon":"Radio","description":"Now playing, recent scrobbles, top artists and listening totals from Last.fm.","credentials":["discordClientId","discordClientSecret","providerApiKey"],"provider":{"name":"Last.fm","apiKeyLabel":"Last.fm API Key","required":["providerApiKey"]},"botToken":"optional","status":"ready"},
+  {"id":"spotify","name":"Spotify Profile & Listening","category":"Music","icon":"Music2","description":"Connect Spotify OAuth to show your profile, currently playing, recent tracks and top tracks.","credentials":["discordClientId","discordClientSecret","providerClientId","providerClientSecret"],"provider":{"name":"Spotify","clientIdLabel":"Spotify Client ID","clientSecretLabel":"Spotify Client Secret","required":["providerClientId","providerClientSecret"]},"botToken":"optional","status":"ready"},
+  {"id":"custom-stats","name":"Custom Stats Card","category":"Creative","icon":"Image","description":"Build your own stats card with a custom title, message, image and arbitrary stat values.","credentials":["discordClientId","discordClientSecret"],"botToken":"optional","status":"ready"},
+  {"id":"system-monitor","name":"System Monitor","category":"Utility","icon":"Activity","description":"CPU, memory, uptime and host information from the NekoDeck host.","credentials":["discordClientId","discordClientSecret"],"botToken":"optional","status":"ready"},
+  {"id":"status-check","name":"Status Checker","category":"Utility","icon":"Wifi","description":"Check whether a website or API endpoint is responding and measure latency.","credentials":["discordClientId","discordClientSecret"],"botToken":"optional","status":"ready"},
+  {"id":"timer","name":"Shared Timer","category":"Social","icon":"Timer","description":"A clean countdown/timer panel suitable for Discord Activity rooms.","credentials":["discordClientId","discordClientSecret"],"botToken":"optional","status":"ready"},
+  {"id":"notes","name":"Shared Notes","category":"Social","icon":"NotebookPen","description":"Quick shared notes and planning board for a Discord group.","credentials":["discordClientId","discordClientSecret"],"botToken":"optional","status":"ready"},
+  {"id":"counter","name":"Live Counter","category":"Social","icon":"PlusMinus","description":"Simple increment/decrement counter with a large display.","credentials":["discordClientId","discordClientSecret"],"botToken":"optional","status":"ready"},
+  {"id":"random-picker","name":"Random Picker","category":"Social","icon":"Dices","description":"Randomly pick a name, option, map or task from a list.","credentials":["discordClientId","discordClientSecret"],"botToken":"optional","status":"ready"},
+  {"id":"custom-api","name":"Custom API Widget","category":"Developer","icon":"Braces","description":"Starter template for connecting a JSON API to a custom NekoDeck widget.","credentials":["discordClientId","discordClientSecret"],"botToken":"optional","status":"ready"}
 ]

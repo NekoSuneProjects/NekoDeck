@@ -1,9 +1,12 @@
 {
   "name": "nekodeck",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Customisable Discord utility widget deck for desktop, web and Docker.",
-  "author": "NekoSuneVR / NekoSuneProjects",
+  "author": {
+    "name": "NekoSuneVR / NekoSuneProjects",
+    "email": "NekoSuneProjects@users.noreply.github.com"
+  },
   "license": "MIT",
   "main": "electron/main.cjs",
   "type": "module",
@@ -37,34 +40,18 @@
     "appId": "uk.co.nekosuneprojects.nekodeck",
     "productName": "NekoDeck",
     "asar": true,
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "dist/**/*",
-      "electron/**/*",
-      "server/**/*",
-      "shared/**/*",
-      "package.json"
-    ],
+    "directories": { "output": "release" },
+    "files": ["dist/**/*", "electron/**/*", "server/**/*", "shared/**/*", "package.json"],
     "win": {
-      "target": [
-        { "target": "nsis", "arch": ["x64"] },
-        { "target": "portable", "arch": ["x64"] }
-      ],
+      "target": [{"target":"nsis","arch":["x64"]},{"target":"portable","arch":["x64"]}],
       "artifactName": "NekoDeck-${version}-Windows-${arch}.${ext}"
     },
     "linux": {
-      "target": [
-        { "target": "AppImage", "arch": ["x64"] },
-        { "target": "deb", "arch": ["x64"] }
-      ],
+      "target": [{"target":"AppImage","arch":["x64"]},{"target":"deb","arch":["x64"]}],
       "category": "Utility",
+      "maintainer": "NekoSuneProjects <NekoSuneProjects@users.noreply.github.com>",
       "artifactName": "NekoDeck-${version}-Linux-${arch}.${ext}"
     },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
-    }
+    "nsis": {"oneClick":false,"allowToChangeInstallationDirectory":true}
   }
 }
