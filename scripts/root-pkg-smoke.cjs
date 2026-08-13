@@ -15,13 +15,19 @@ function run(command, args) {
   });
 }
 
+function capture(command, args) {
+  return execFileSync(command, args, {
+    cwd: workDir,
+    encoding: 'utf8',
+    env: { ...process.env, npm_config_audit: 'false', npm_config_fund: 'false' }
+  });
+}
+
 try {
   const config = normalizeBotConfig({
     description: 'NekoDeck Root package CI smoke test',
     platforms: { discord: false, rootapp: true },
     rootapp: {
-      // Root App/Bot IDs use a compact URL-safe identifier format.
-      // Packaging validates the format locally but does not require this CI ID to be registered.
       projectId: 'ACj4U-eThgmjXUOBAjk_jw',
       version: '0.0.1',
       settings: {},
@@ -58,8 +64,17 @@ try {
   const header = fs.readFileSync(pkgPath).subarray(0, 64);
   console.log(`Root package first 64 bytes (hex): ${header.toString('hex')}`);
   try { run('file', ['rootapp.pkg']); } catch {}
-  try { run('unzip', ['-l', 'rootapp.pkg']); } catch {}
   try { run('tar', ['-tf', 'rootapp.pkg']); } catch {}
+
+  run('tar', ['-xzf', 'rootapp.pkg', 'server.tar.gz', 'client.tar.gz']);
+  const serverEntries = capture('tar', ['-tzf', 'server.tar.gz']).trim().split('\n');
+  const clientEntries = capture('tar', ['-tzf', 'client.tar.gz']).trim().split('\n').filter(Boolean);
+  console.log(`server.tar.gz entries: ${serverEntries.length}`);
+  console.log(serverEntries.slice(0, 80).join('\n'));
+  console.log(`client.tar.gz entries: ${clientEntries.length}`);
+  console.log(clientEntries.slice(0, 80).join('\n'));
+  console.log(`server contains @rootsdk/dev-tools: ${serverEntries.some(x => x.includes('@rootsdk/dev-tools'))}`);
+  console.log(`server contains sqlite3: ${serverEntries.some(x => /(^|\/)sqlite3(\/|$)/.test(x))}`);
 } finally {
   fs.rmSync(workDir, { recursive: true, force: true });
 }
