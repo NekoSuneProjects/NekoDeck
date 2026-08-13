@@ -54,6 +54,12 @@ try {
   const stat = fs.statSync(pkgPath);
   if (!stat.size) throw new Error('rootapp.pkg was created but is empty');
   console.log(`Root package smoke test passed: ${pkgPath} (${stat.size} bytes)`);
+
+  const header = fs.readFileSync(pkgPath).subarray(0, 64);
+  console.log(`Root package first 64 bytes (hex): ${header.toString('hex')}`);
+  try { run('file', ['rootapp.pkg']); } catch {}
+  try { run('unzip', ['-l', 'rootapp.pkg']); } catch {}
+  try { run('tar', ['-tf', 'rootapp.pkg']); } catch {}
 } finally {
   fs.rmSync(workDir, { recursive: true, force: true });
 }
