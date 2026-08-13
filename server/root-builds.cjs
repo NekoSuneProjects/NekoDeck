@@ -93,6 +93,50 @@ function run(command, args, cwd, options = {}) {
   });
 }
 
+function findRootPackages(rootDir) {
+  const found = [];
+  const walk = (dir, depth = 0) => {
+    if (depth > 8 || found.length > 20) return;
+    let entries;
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const entry of entries) {
+      // node_modules can contain a very large tree and cannot be the output
+      // package itself, so skip it during discovery.
+      if (entry.isDirectory() && entry.name === 'node_modules') continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full, depth + 1);
+      else if (entry.isFile() && entry.name.toLowerCase().endsWith('.pkg')) found.push(full);
+    }
+  };
+  walk(rootDir);
+  return found;
+}
+
+function diagnosticFiles(rootDir) {
+  const rows = [];
+  const walk = (dir, rel = '', depth = 0) => {
+    if (depth > 3 || rows.length >= 80) return;
+    let entries;
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const entry of entries) {
+      if (rows.length >= 80) return;
+      if (entry.name === 'node_modules' || entry.name === '.git') continue;
+      const nextRel = rel ? `${rel}/${entry.name}` : entry.name;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        rows.push(`${nextRel}/`);
+        walk(full, nextRel, depth + 1);
+      } else {
+        let size = '';
+        try { size = ` (${fs.statSync(full).size} bytes)`; } catch {}
+        rows.push(`${nextRel}${size}`);
+      }
+    }
+  };
+  walk(rootDir);
+  return rows;
+}
+
 async function buildGeneratedRootPackage(zip, options = {}) {
   const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nekodeck-root-'));
   const logs = [];
@@ -101,12 +145,29 @@ async function buildGeneratedRootPackage(zip, options = {}) {
     zip.extractAllTo(workDir, true);
     logs.push(await run(executable('npm'), ['install', '--include=dev', '--no-audit', '--no-fund'], workDir));
     logs.push(await run(executable('npm'), ['run', 'build'], workDir));
-    logs.push(await run(executable('npx'), packageArgs(), workDir));
-    const pkgPath = path.join(workDir, 'rootapp.pkg');
-    if (!fs.existsSync(pkgPath)) throw new Error('Root SDK completed without creating rootapp.pkg');
+    const packageOutput = await run(executable('npx'), packageArgs(), workDir);
+    logs.push(packageOutput);
+
+    const requestedPath = path.join(workDir, 'rootapp.pkg');
+    const candidates = fs.existsSync(requestedPath) ? [requestedPath] : findRootPackages(workDir);
+    if (!candidates.length) {
+      const listing = diagnosticFiles(workDir).join('\n');
+      throw new Error(
+        `Root SDK completed without creating a .pkg file.` +
+        `${packageOutput ? `\nRoot SDK output:\n${packageOutput}` : ''}` +
+        `${listing ? `\nGenerated project files:\n${listing}` : ''}`
+      );
+    }
+    if (candidates.length > 1 && !fs.existsSync(requestedPath)) {
+      throw new Error(`Root SDK created multiple .pkg files and NekoDeck could not choose one:\n${candidates.map(x => path.relative(workDir, x)).join('\n')}`);
+    }
+    const pkgPath = fs.existsSync(requestedPath) ? requestedPath : candidates[0];
 
     if (options.publish) {
       if (!authToken) throw new Error('Root upload auth token is not stored for this project');
+      // The upload command is documented against ./rootapp.pkg. If the Root
+      // SDK placed the build elsewhere, normalize it back to that filename.
+      if (pkgPath !== requestedPath) fs.copyFileSync(pkgPath, requestedPath);
       logs.push(await run(executable('npx'), uploadArgs(authToken, options.host), workDir, { secrets: [authToken] }));
     }
 
@@ -195,5 +256,6 @@ module.exports = {
   buildGeneratedRootPackage,
   packageArgs,
   uploadArgs,
-  cleanHost
+  cleanHost,
+  findRootPackages
 };
