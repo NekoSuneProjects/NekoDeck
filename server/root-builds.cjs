@@ -52,6 +52,14 @@ function run(command, args, cwd, options = {}) {
       cwd,
       env: {
         ...process.env,
+        // NekoDeck itself runs with NODE_ENV=production in Docker, but the
+        // generated Root project needs its build-time dependencies (TypeScript
+        // and @rootsdk/dev-tools). Keep that temporary subprocess isolated in
+        // development/build mode instead of inheriting production omission.
+        NODE_ENV: 'development',
+        npm_config_production: 'false',
+        npm_config_include: 'dev',
+        npm_config_omit: '',
         npm_config_audit: 'false',
         npm_config_fund: 'false',
         ...(options.env || {})
@@ -91,7 +99,7 @@ async function buildGeneratedRootPackage(zip, options = {}) {
   const authToken = options.authToken || '';
   try {
     zip.extractAllTo(workDir, true);
-    logs.push(await run(executable('npm'), ['install', '--no-audit', '--no-fund'], workDir));
+    logs.push(await run(executable('npm'), ['install', '--include=dev', '--no-audit', '--no-fund'], workDir));
     logs.push(await run(executable('npm'), ['run', 'build'], workDir));
     logs.push(await run(executable('npx'), packageArgs(), workDir));
     const pkgPath = path.join(workDir, 'rootapp.pkg');
