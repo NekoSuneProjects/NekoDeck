@@ -46,9 +46,17 @@ jobs:
           printf '%s\n' "$response"
           bot_id=$(printf '%s' "$response" | python3 -c 'import json,sys; print(json.load(sys.stdin)["bot"]["id"])')
           test -n "$bot_id"
-          curl --fail-with-body -sS \
-            -o /tmp/rootapp.pkg \
-            "http://127.0.0.1:3210/api/bots/${bot_id}/export/root-pkg"
+
+          status=$(curl -sS \
+            -o /tmp/root-package-response \
+            -w '%{http_code}' \
+            "http://127.0.0.1:3210/api/bots/${bot_id}/export/root-pkg")
+          if [ "$status" != "200" ]; then
+            echo "Root package API returned HTTP $status"
+            cat /tmp/root-package-response
+            exit 1
+          fi
+          mv /tmp/root-package-response /tmp/rootapp.pkg
           test -s /tmp/rootapp.pkg
           ls -lh /tmp/rootapp.pkg
       - name: Show NekoDeck logs on failure
