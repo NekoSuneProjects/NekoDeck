@@ -1,0 +1,19 @@
+name: Root PKG Smoke
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  root-pkg-linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - name: Build a real Root .pkg on Linux
+        run: node scripts/root-pkg-smoke.cjs
