@@ -4,6 +4,7 @@ const { registerActivityManagementRoutes } = require('./activity-management.cjs'
 const { registerAdvancedActivityRoutes } = require('./activity-web-host.cjs');
 const { registerActivityRoutes } = require('./activities.cjs');
 const { registerRootAppRoutes } = require('./rootapp.cjs');
+const { registerBotBuilderRoutes } = require('./bots.cjs');
 
 function createApp(options = {}) {
   const out = createBaseApp(options);
@@ -12,6 +13,7 @@ function createApp(options = {}) {
   registerAdvancedActivityRoutes(out.app, out.store, options);
   registerActivityRoutes(out.app, out.store, options);
   registerRootAppRoutes(out.app, out.store, options);
+  registerBotBuilderRoutes(out.app, out.store, options);
   return out;
 }
 
