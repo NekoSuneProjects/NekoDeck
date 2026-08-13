@@ -1,6 +1,6 @@
 const { app, BrowserWindow, shell } = require('electron');
 const path = require('node:path');
-const { createApp } = require('../server/v2.cjs');
+const { createApp } = require('../server/v3.cjs');
 
 let server;
 async function createWindow() {
