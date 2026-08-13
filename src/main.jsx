@@ -4,6 +4,7 @@ import AppV2 from './AppV2.jsx';
 import ActivityStudioV3 from './ActivityStudioV3.jsx';
 import ProfileWidgetManager from './ProfileWidgetManager.jsx';
 import AppSystems from './AppSystems.jsx';
+import BotBuilder from './BotBuilder.jsx';
 import './styles.css';
 
 createRoot(document.getElementById('root')).render(
@@ -12,5 +13,6 @@ createRoot(document.getElementById('root')).render(
     <ActivityStudioV3 />
     <ProfileWidgetManager />
     <AppSystems />
+    <BotBuilder />
   </React.StrictMode>
 );
