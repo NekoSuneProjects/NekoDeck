@@ -11,6 +11,7 @@ const { registerAdvancedActivityRoutes } = require('./activity-web-host.cjs');
 const { registerActivityRoutes } = require('./activities.cjs');
 const { registerRootAppRoutes } = require('./rootapp.cjs');
 const { registerBotBuilderRoutes } = require('./bots.cjs');
+const { registerRootJobRoutes } = require('./root-jobs.cjs');
 const { registerRootBuildRoutes } = require('./root-builds.cjs');
 
 function createApp(options = {}) {
@@ -21,6 +22,10 @@ function createApp(options = {}) {
   registerActivityRoutes(out.app, out.store, options);
   registerRootAppRoutes(out.app, out.store, options);
   registerBotBuilderRoutes(out.app, out.store, options);
+  // Root job compatibility routes must be registered before the legacy
+  // synchronous publish routes so uploads return immediately instead of
+  // waiting long enough for a reverse proxy/Cloudflare 524.
+  registerRootJobRoutes(out.app, out.store, options);
   registerRootBuildRoutes(out.app, out.store, options);
   return out;
 }
