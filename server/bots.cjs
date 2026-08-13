@@ -161,7 +161,7 @@ function buildRootZip(instance) {
     },
     dependencies: { '@rootsdk/server-bot': '*' }, devDependencies: { '@rootsdk/dev-tools': '*', typescript: '*' }
   };
-  const tsconfig = { compilerOptions: { target: 'ES2022', module: 'CommonJS', moduleResolution: 'Node', outDir: 'dist', rootDir: 'src', esModuleInterop: true, strict: true, skipLibCheck: true }, include: ['src/**/*.ts'] };
+  const tsconfig = { compilerOptions: { target: 'ES2022', module: 'Node16', moduleResolution: 'Node16', outDir: 'dist', rootDir: 'src', esModuleInterop: true, strict: true, skipLibCheck: true }, include: ['src/**/*.ts'] };
   zip.addFile('root-manifest.json', Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`));
   zip.addFile('package.json', Buffer.from(`${JSON.stringify(pkg, null, 2)}\n`));
   zip.addFile('tsconfig.json', Buffer.from(`${JSON.stringify(tsconfig, null, 2)}\n`));
