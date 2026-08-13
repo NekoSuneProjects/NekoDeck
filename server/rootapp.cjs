@@ -168,8 +168,8 @@ function buildScaffoldZip(instance, dataDir) {
   const tsconfig = {
     compilerOptions: {
       target: 'ES2022',
-      module: 'CommonJS',
-      moduleResolution: 'Node',
+      module: 'Node16',
+      moduleResolution: 'Node16',
       outDir: 'dist',
       rootDir: 'src',
       esModuleInterop: true,
