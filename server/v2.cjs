@@ -1,6 +1,7 @@
 const crypto = require('node:crypto');
 const { createApp: createBaseApp } = require('./app.cjs');
 const { parseRockstarStatsHtml } = require('./providers.cjs');
+const { registerActivityRoutes } = require('./activities.cjs');
 
 const TRN_GAMES = new Set(['apex','fortnite','halo']);
 const ROCKSTAR_CATEGORIES = new Set(['Career','Skills','General','Crimes','Vehicles','Cash','Combat','Weapons']);
@@ -10,7 +11,7 @@ function error(res, status, message, details) { return res.status(status).json({
 function admin(req,res,next){ const token=process.env.NEKODECK_API_TOKEN||''; if(!token||req.get('X-NekoDeck-Token')===token)return next(); return error(res,401,'Admin token required'); }
 function cookie(value,name=''){ const raw=String(value||'').trim(); if(!raw)return ''; return raw.includes('=')||!name?raw:`${name}=${raw}`; }
 function baseUrl(req){ const proto=String(req.get('x-forwarded-proto')||req.protocol).split(',')[0].trim(); const host=String(req.get('x-forwarded-host')||req.get('host')).split(',')[0].trim(); return `${proto}://${host}`; }
-async function request(url, options={}) { const c=new AbortController(); const t=setTimeout(()=>c.abort(), options.timeout||12000); try { return await fetch(url,{...options,signal:c.signal,headers:{'user-agent':'NekoDeck/0.2 (+https://github.com/NekoSuneProjects/NekoDeck)',...(options.headers||{})}}); } finally { clearTimeout(t); } }
+async function request(url, options={}) { const c=new AbortController(); const t=setTimeout(()=>c.abort(), options.timeout||12000); try { return await fetch(url,{...options,signal:c.signal,headers:{'user-agent':'NekoDeck/0.3 (+https://github.com/NekoSuneProjects/NekoDeck)',...(options.headers||{})}}); } finally { clearTimeout(t); } }
 async function json(url, options={}) { const r=await request(url,{...options,headers:{accept:'application/json',...(options.headers||{})}}); const text=await r.text(); let data; try{data=text?JSON.parse(text):null}catch{data={raw:text.slice(0,1200)}} if(!r.ok){const e=new Error(`Upstream HTTP ${r.status}`);e.status=r.status;e.data=data;throw e} return data; }
 async function text(url, options={}) { const r=await request(url,options); const body=await r.text(); if(!r.ok){const e=new Error(`Upstream HTTP ${r.status}`);e.status=r.status;e.data=body.slice(0,1200);throw e} return body; }
 
@@ -42,5 +43,10 @@ function registerV2(app, store) {
   app.get('/api/widgets/spotify/:id/profile', async(req,res)=>{try{const token=await spotifyToken(req.params.id),headers={authorization:`Bearer ${token}`},parts=await Promise.allSettled([json('https://api.spotify.com/v1/me',{headers}),json('https://api.spotify.com/v1/me/player/currently-playing',{headers}),json('https://api.spotify.com/v1/me/player/recently-played?limit=8',{headers}),json('https://api.spotify.com/v1/me/top/tracks?limit=8&time_range=medium_term',{headers})]),val=n=>parts[n].status==='fulfilled'?parts[n].value:null;res.json({ok:true,spotify:{profile:val(0),currentlyPlaying:val(1),recent:val(2)?.items||[],topTracks:val(3)?.items||[],partialErrors:parts.map((x,n)=>x.status==='rejected'?{index:n,message:x.reason?.message}:null).filter(Boolean)}})}catch(e){error(res,e.status||502,'Spotify request failed',e.data||e.message)}});
 }
 
-function createApp(options={}) { const out=createBaseApp(options); registerV2(out.app,out.store); return out; }
+function createApp(options={}) {
+  const out=createBaseApp(options);
+  registerV2(out.app,out.store);
+  registerActivityRoutes(out.app,out.store,options);
+  return out;
+}
 module.exports={createApp,registerV2};
