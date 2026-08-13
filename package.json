@@ -1,8 +1,8 @@
 {
   "name": "nekodeck",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
-  "description": "Discord Profile Board stats pipeline, widget previews, utilities and optional Activities for desktop, web and Docker.",
+  "description": "Discord Profile Board widgets plus full web app, Unity WebGL and utility Activities for desktop, web and Docker.",
   "author": {
     "name": "NekoSuneVR / NekoSuneProjects",
     "email": "NekoSuneProjects@users.noreply.github.com"
