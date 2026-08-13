@@ -1,0 +1,264 @@
+const fs = require('node:fs');
+const path = require('node:path');
+const AdmZip = require('adm-zip');
+
+const ROOT = path.resolve(__dirname, '..');
+
+function jsonError(res, status, message) {
+  return res.status(status).json({ ok: false, error: message });
+}
+
+function requireAdmin(req, res, next) {
+  const token = process.env.NEKODECK_API_TOKEN || '';
+  if (!token || req.get('X-NekoDeck-Token') === token) return next();
+  return jsonError(res, 401, 'Admin token required');
+}
+
+function isSemver(value) {
+  return /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(String(value || ''));
+}
+
+function parseJsonObject(value, label) {
+  if (value === undefined || value === null || value === '') return undefined;
+  if (typeof value === 'object' && !Array.isArray(value)) return value;
+  if (typeof value !== 'string') throw new Error(`${label} must be a JSON object`);
+  let parsed;
+  try { parsed = JSON.parse(value); } catch { throw new Error(`${label} contains invalid JSON`); }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error(`${label} must be a JSON object`);
+  return parsed;
+}
+
+function defaultRootConfig(instance) {
+  return {
+    enabled: Boolean(instance?.config?.platformTargets?.rootapp),
+    projectId: '',
+    version: '0.1.0',
+    settings: {},
+    permissions: {},
+    clientDeploy: 'client/dist',
+    serverLaunch: 'server/dist/main.js',
+    serverDeploy: ['server/dist'],
+    serverNodeModules: ['server/node_modules'],
+    ...(instance?.config?.rootApp || {})
+  };
+}
+
+function publicRootConfig(instance) {
+  const root = defaultRootConfig(instance);
+  return {
+    enabled: Boolean(root.enabled),
+    projectId: root.projectId || '',
+    version: root.version || '0.1.0',
+    settings: root.settings || {},
+    permissions: root.permissions || {},
+    clientDeploy: 'client/dist',
+    serverLaunch: 'server/dist/main.js',
+    serverDeploy: ['server/dist'],
+    serverNodeModules: ['server/node_modules']
+  };
+}
+
+function buildManifest(instance) {
+  const root = publicRootConfig(instance);
+  if (!root.projectId) throw new Error('RootApp project ID is required');
+  if (!isSemver(root.version)) throw new Error('RootApp version must be semantic versioning, for example 1.0.0');
+  const manifest = {
+    id: root.projectId,
+    version: root.version,
+    package: {
+      client: { deploy: 'client/dist' },
+      server: {
+        launch: 'server/dist/main.js',
+        deploy: ['server/dist'],
+        nodeModules: ['server/node_modules']
+      }
+    }
+  };
+  if (root.settings && Object.keys(root.settings).length) manifest.settings = root.settings;
+  if (root.permissions && Object.keys(root.permissions).length) manifest.permissions = root.permissions;
+  return manifest;
+}
+
+function activityContentRoot(dataDir, instance) {
+  if (!instance || instance.templateId !== 'web-activity') return null;
+  if (instance.config?.activitySourceType !== 'upload') return null;
+  const base = path.join(dataDir, 'activity-content', instance.id);
+  if (!fs.existsSync(base)) return null;
+  const entry = String(instance.config?.activityEntry || 'index.html').replaceAll('\\', '/');
+  const entryDir = path.posix.dirname(entry);
+  const source = entryDir === '.' ? base : path.resolve(base, ...entryDir.split('/'));
+  if (source !== base && !source.startsWith(`${base}${path.sep}`)) return null;
+  return fs.existsSync(source) ? source : null;
+}
+
+function addDirectoryToZip(zip, sourceDir, targetPrefix) {
+  const walk = (dir, rel = '') => {
+    for (const item of fs.readdirSync(dir, { withFileTypes: true })) {
+      const nextRel = rel ? `${rel}/${item.name}` : item.name;
+      const full = path.join(dir, item.name);
+      if (item.isDirectory()) walk(full, nextRel);
+      else zip.addLocalFile(full, `${targetPrefix}/${path.posix.dirname(nextRel)}`.replace(/\/$/, ''), path.posix.basename(nextRel));
+    }
+  };
+  walk(sourceDir);
+}
+
+function fallbackClientHtml(instance) {
+  const title = String(instance?.name || 'NekoDeck RootApp').replace(/[<>&"]/g, '');
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{margin:0;background:#07120d;color:#effff5;font:16px system-ui;display:grid;place-items:center;min-height:100vh}.card{max-width:720px;padding:32px;border:1px solid #27503a;border-radius:24px;background:#0a1a12}h1{margin-top:0;color:#67f39a}code{color:#b7f0ca}</style></head><body><main class="card"><h1>${title}</h1><p>This RootApp scaffold was exported by NekoDeck.</p><p>Replace <code>client/dist</code> with your compiled web client, or export an uploaded NekoDeck Web Activity to carry its HTML/JS/CSS/WASM assets automatically.</p></main></body></html>`;
+}
+
+function scaffoldReadme(instance, manifest) {
+  const versionFile = `rootapp-${manifest.version.replaceAll('.', '-')}.pkg`;
+  return `# ${instance.name} — RootApp export\n\nGenerated by NekoDeck.\n\n## Requirements\n\n- Node.js 22+\n- Root desktop client\n- A Root Developer Portal project whose project ID matches \`${manifest.id}\`\n- A DEV_TOKEN for local testing\n- An upload authentication token for publishing\n\n## Install and build\n\n\`\`\`bash\nnpm install\nnpm --prefix server install\nnpm --prefix server run build\n\`\`\`\n\nFor local server testing, copy \`server/.env.example\` to \`server/.env\`, put your DEV_TOKEN there, then run:\n\n\`\`\`bash\nnpm --prefix server run server\n\`\`\`\n\n## Package\n\n\`\`\`bash\nnpx rootsdk build package --output-file ./dist/${versionFile}\n\`\`\`\n\n## Upload\n\n\`\`\`bash\nnpx rootsdk upload package --file ./dist/${versionFile} --auth-token $ROOT_AUTH_TOKEN\n\`\`\`\n\nNekoDeck never writes your stored DEV_TOKEN or upload token into this ZIP.\n`;
+}
+
+function buildScaffoldZip(instance, dataDir) {
+  const manifest = buildManifest(instance);
+  const zip = new AdmZip();
+  const packageName = String(instance.name || 'nekodeck-rootapp').toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-|-$/g, '') || 'nekodeck-rootapp';
+  const packageJson = {
+    name: packageName,
+    version: manifest.version,
+    private: true,
+    scripts: {
+      'root:package': `rootsdk build package --output-file ./dist/rootapp-${manifest.version.replaceAll('.', '-')}.pkg`
+    },
+    devDependencies: { '@rootsdk/dev-tools': '*' }
+  };
+  const serverPackage = {
+    name: `${packageName}-server`,
+    version: manifest.version,
+    private: true,
+    scripts: {
+      build: 'tsc',
+      server: 'rootsdk start devhost --project-folder=../'
+    },
+    dependencies: { '@rootsdk/server-app': '*' },
+    devDependencies: { '@rootsdk/dev-tools': '*', typescript: '*' }
+  };
+  const tsconfig = {
+    compilerOptions: {
+      target: 'ES2022',
+      module: 'CommonJS',
+      moduleResolution: 'Node',
+      outDir: 'dist',
+      rootDir: 'src',
+      esModuleInterop: true,
+      strict: true,
+      skipLibCheck: true
+    },
+    include: ['src/**/*.ts']
+  };
+  const serverMain = `import { rootServer, RootAppStartState } from "@rootsdk/server-app";\n\nasync function onStarting(state: RootAppStartState) {\n  console.log("NekoDeck RootApp started for community", state?.community?.id ?? "unknown");\n}\n\nasync function onStopping() {\n  console.log("NekoDeck RootApp stopping");\n}\n\n(async () => {\n  await rootServer.lifecycle.start(onStarting, onStopping);\n})();\n`;
+
+  zip.addFile('root-manifest.json', Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`));
+  zip.addFile('package.json', Buffer.from(`${JSON.stringify(packageJson, null, 2)}\n`));
+  zip.addFile('.gitignore', Buffer.from('node_modules/\nserver/node_modules/\nserver/.env\ndist/\n'));
+  zip.addFile('README.md', Buffer.from(scaffoldReadme(instance, manifest)));
+  zip.addFile('server/package.json', Buffer.from(`${JSON.stringify(serverPackage, null, 2)}\n`));
+  zip.addFile('server/tsconfig.json', Buffer.from(`${JSON.stringify(tsconfig, null, 2)}\n`));
+  zip.addFile('server/src/main.ts', Buffer.from(serverMain));
+  zip.addFile('server/.env.example', Buffer.from('DEV_TOKEN=replace-with-root-developer-token\n'));
+
+  const contentRoot = activityContentRoot(dataDir, instance);
+  if (contentRoot) addDirectoryToZip(zip, contentRoot, 'client/dist');
+  else zip.addFile('client/dist/index.html', Buffer.from(fallbackClientHtml(instance)));
+  return { zip, manifest, bundledClient: Boolean(contentRoot) };
+}
+
+function registerRootAppRoutes(app, store, options = {}) {
+  const dataDir = options.dataDir || process.env.NEKODECK_DATA_DIR || path.join(ROOT, 'data');
+
+  app.get('/api/app-systems', (_req, res) => {
+    const instances = store.listInstances().map((instance) => ({
+      ...instance,
+      platforms: {
+        discord: instance.config?.platformTargets?.discord !== false,
+        rootapp: Boolean(instance.config?.platformTargets?.rootapp)
+      },
+      rootApp: publicRootConfig(instance)
+    }));
+    res.json({ ok: true, instances });
+  });
+
+  app.get('/api/rootapp/:id', (req, res) => {
+    const instance = store.getPublicInstance(req.params.id);
+    if (!instance) return jsonError(res, 404, 'NekoDeck app not found');
+    const root = publicRootConfig(instance);
+    res.json({
+      ok: true,
+      instance,
+      rootApp: root,
+      credentialStatus: {
+        devToken: Boolean(instance.credentialStatus?.rootDevToken),
+        authToken: Boolean(instance.credentialStatus?.rootAuthToken)
+      },
+      commands: root.projectId && isSemver(root.version) ? {
+        build: 'npm install && npm --prefix server install && npm --prefix server run build',
+        package: `npx rootsdk build package --output-file ./dist/rootapp-${root.version.replaceAll('.', '-')}.pkg`,
+        upload: `npx rootsdk upload package --file ./dist/rootapp-${root.version.replaceAll('.', '-')}.pkg --auth-token $ROOT_AUTH_TOKEN`
+      } : null
+    });
+  });
+
+  app.put('/api/rootapp/:id', requireAdmin, (req, res) => {
+    const instance = store.getPublicInstance(req.params.id);
+    if (!instance) return jsonError(res, 404, 'NekoDeck app not found');
+    try {
+      const current = defaultRootConfig(instance);
+      const next = { ...current };
+      if (typeof req.body?.enabled === 'boolean') next.enabled = req.body.enabled;
+      if (req.body?.projectId !== undefined) next.projectId = String(req.body.projectId || '').trim().slice(0, 160);
+      if (req.body?.version !== undefined) {
+        const version = String(req.body.version || '').trim();
+        if (!isSemver(version)) throw new Error('RootApp version must be semantic versioning, for example 1.0.0');
+        next.version = version;
+      }
+      const settings = parseJsonObject(req.body?.settings, 'RootApp settings');
+      const permissions = parseJsonObject(req.body?.permissions, 'RootApp permissions');
+      if (settings !== undefined) next.settings = settings;
+      if (permissions !== undefined) next.permissions = permissions;
+
+      const discordEnabled = req.body?.discordEnabled === undefined
+        ? instance.config?.platformTargets?.discord !== false
+        : Boolean(req.body.discordEnabled);
+      store.updateConfig(req.params.id, {
+        rootApp: next,
+        platformTargets: { discord: discordEnabled, rootapp: Boolean(next.enabled) }
+      });
+
+      const secrets = {};
+      if (typeof req.body?.devToken === 'string' && req.body.devToken.trim()) secrets.rootDevToken = req.body.devToken.trim();
+      if (typeof req.body?.authToken === 'string' && req.body.authToken.trim()) secrets.rootAuthToken = req.body.authToken.trim();
+      if (Object.keys(secrets).length) store.mergeCredentials(req.params.id, secrets);
+      return res.json({ ok: true, instance: store.getPublicInstance(req.params.id), rootApp: publicRootConfig(store.getPublicInstance(req.params.id)) });
+    } catch (error) {
+      return jsonError(res, 400, error.message);
+    }
+  });
+
+  app.get('/api/rootapp/:id/manifest', (req, res) => {
+    const instance = store.getPublicInstance(req.params.id);
+    if (!instance) return jsonError(res, 404, 'NekoDeck app not found');
+    try { return res.json({ ok: true, manifest: buildManifest(instance) }); }
+    catch (error) { return jsonError(res, 400, error.message); }
+  });
+
+  app.get('/api/rootapp/:id/export', requireAdmin, (req, res) => {
+    const instance = store.getPublicInstance(req.params.id);
+    if (!instance) return jsonError(res, 404, 'NekoDeck app not found');
+    try {
+      const { zip, manifest, bundledClient } = buildScaffoldZip(instance, dataDir);
+      const safeName = String(instance.name || 'rootapp').replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-|-$/g, '') || 'rootapp';
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="${safeName}-RootApp-${manifest.version}.zip"`);
+      res.setHeader('X-NekoDeck-RootApp-Client', bundledClient ? 'bundled-activity' : 'generated-placeholder');
+      return res.send(zip.toBuffer());
+    } catch (error) {
+      return jsonError(res, 400, error.message);
+    }
+  });
+}
+
+module.exports = { registerRootAppRoutes, buildManifest, publicRootConfig, buildScaffoldZip };
